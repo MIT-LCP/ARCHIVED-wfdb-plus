@@ -32,16 +32,16 @@ sudo apt-get update && sudo apt-get install -y gcc curl cmake
 See also the [Dockerfile](./Dockerfile) for a containerized installation. To build the container:
 
 ```sh
-docker build . -f Dockerfile -t wfdb
+docker build . -t wfdb -f Dockerfile
 ```
 
-## Development
+## Developing WFDB
 
 ### Containerized Development Environment
 
-This section describes a potential multi-platform development environment setup. You are not required to use this setup.
+This section describes a potential containerized development environment that can be used on Linux, MacOS, and Windows. You are not required to use this setup.
 
-Users on Linux, MacOS, and Windows can perform development inside of a Docker container. A recommended environment is shown in [Dockerfile.dev](./Dockerfile.dev). To set up this system:
+A recommended environment is shown in [Dockerfile.dev](./Dockerfile.dev). To set up this system:
 
 - [Install](https://docs.docker.com/get-docker/) Docker or Docker Desktop.
 
