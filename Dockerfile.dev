@@ -1,0 +1,4 @@
+# Includes gcc, cmake, libcurl-dev
+FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-debian-11
+
+ENTRYPOINT ["/bin/bash"]

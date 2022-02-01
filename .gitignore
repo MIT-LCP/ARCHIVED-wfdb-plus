@@ -163,3 +163,7 @@ wave/wave
 
 waverc/wave-remote
 waverc/wavescript
+
+# Editor content
+.vscode
+.devcontainer
