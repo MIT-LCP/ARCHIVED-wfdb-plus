@@ -1,5 +1,5 @@
 /* file: wfdb.h		G. Moody	13 June 1983
-			Last revised:    4 May 2020     	wfdblib 10.7.0
+                        Last revised:    4 May 2020     	wfdblib 10.7.0
 WFDB library type, constant, structure, and function interface definitions
 _______________________________________________________________________________
 wfdb: a library for reading and writing annotated waveforms (time series data)
@@ -25,119 +25,121 @@ _______________________________________________________________________________
 
 */
 
-#ifndef wfdb_WFDB_H	/* avoid multiple definitions */
+#ifndef wfdb_WFDB_H /* avoid multiple definitions */
 #define wfdb_WFDB_H
 
 /* WFDB library version. */
-#define WFDB_MAJOR   WFDBMAJOR
-#define WFDB_MINOR   WFDBMINOR
+#define WFDB_MAJOR WFDBMAJOR
+#define WFDB_MINOR WFDBMINOR
 #define WFDB_RELEASE WFDBRELEASE
-#define WFDB_NETFILES 1	/* if 1, library includes code for HTTP, FTP clients */
+#define WFDB_NETFILES                                    \
+  1 /* if 1, library includes code for HTTP, FTP clients \
+     */
 #define WFDB_NETFILES_LIBCURL 1
 
 /* Determine what type of compiler is being used. */
-#ifdef __STDC__		/* true for ANSI C compilers only */
-#define wfdb_PROTO	/* function prototypes will be needed */
-#undef _WINDOWS		/* we don't want MS-Windows API in this case */
+#ifdef __STDC__    /* true for ANSI C compilers only */
+#define wfdb_PROTO /* function prototypes will be needed */
+#undef _WINDOWS    /* we don't want MS-Windows API in this case */
 #endif
 
-#ifdef __cplusplus	/* true for some C++ compilers */
+#ifdef __cplusplus /* true for some C++ compilers */
 #define wfdb_CPP
 #define wfdb_PROTO
 #endif
 
-#ifdef c_plusplus	/* true for some other C++ compilers */
+#ifdef c_plusplus /* true for some other C++ compilers */
 #define wfdb_CPP
 #define wfdb_PROTO
 #endif
 
-#ifdef _WIN32		/* true when compiling for 32-bit MS Windows */
+#ifdef _WIN32 /* true when compiling for 32-bit MS Windows */
 #ifndef _WINDOWS
 #define _WINDOWS
 #endif
 #endif
 
-#ifdef _WINDOWS		/* true when compiling for MS Windows */
+#ifdef _WINDOWS /* true when compiling for MS Windows */
 #define wfdb_PROTO
 #endif
 
-#ifndef wfdb_PROTO	/* should be true for K&R C compilers only */
+#ifndef wfdb_PROTO /* should be true for K&R C compilers only */
 #define wfdb_KRC
 #define signed
 #undef WFDB_LARGETIME
 #endif
 
 /* Simple data types */
-typedef int	     WFDB_Sample;   /* units are adus */
-typedef long	     WFDB_Date;	    /* units are days */
-typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
-typedef double	     WFDB_Gain;	    /* units are adus per physical unit */
-typedef unsigned int WFDB_Group;    /* signal group number */
-typedef unsigned int WFDB_Signal;   /* signal number */
-typedef unsigned int WFDB_Annotator;/* annotator number */
+typedef int WFDB_Sample;             /* units are adus */
+typedef long WFDB_Date;              /* units are days */
+typedef double WFDB_Frequency;       /* units are Hz (samples/second/signal) */
+typedef double WFDB_Gain;            /* units are adus per physical unit */
+typedef unsigned int WFDB_Group;     /* signal group number */
+typedef unsigned int WFDB_Signal;    /* signal number */
+typedef unsigned int WFDB_Annotator; /* annotator number */
 
 /* The following macros can be used to determine the ranges of the
    above data types.  You will also need to include <limits.h> and/or
    <float.h>. */
-#define WFDB_SAMPLE_MIN             INT_MIN
-#define WFDB_SAMPLE_MAX             INT_MAX
-#define WFDB_DATE_MIN               LONG_MIN
-#define WFDB_DATE_MAX               LONG_MAX
-#define WFDB_FREQUENCY_MAX          DBL_MAX
-#define WFDB_FREQUENCY_DIG          DBL_DIG
-#define WFDB_FREQUENCY_MAX_10_EXP   DBL_MAX_10_EXP
-#define WFDB_FREQUENCY_EPSILON      DBL_EPSILON
-#define WFDB_GAIN_MAX               DBL_MAX
-#define WFDB_GAIN_DIG               DBL_DIG
-#define WFDB_GAIN_MAX_10_EXP        DBL_MAX_10_EXP
-#define WFDB_GAIN_EPSILON           DBL_EPSILON
-#define WFDB_GROUP_MAX              UINT_MAX
-#define WFDB_SIGNAL_MAX             UINT_MAX
-#define WFDB_ANNOTATOR_MAX          UINT_MAX
+#define WFDB_SAMPLE_MIN INT_MIN
+#define WFDB_SAMPLE_MAX INT_MAX
+#define WFDB_DATE_MIN LONG_MIN
+#define WFDB_DATE_MAX LONG_MAX
+#define WFDB_FREQUENCY_MAX DBL_MAX
+#define WFDB_FREQUENCY_DIG DBL_DIG
+#define WFDB_FREQUENCY_MAX_10_EXP DBL_MAX_10_EXP
+#define WFDB_FREQUENCY_EPSILON DBL_EPSILON
+#define WFDB_GAIN_MAX DBL_MAX
+#define WFDB_GAIN_DIG DBL_DIG
+#define WFDB_GAIN_MAX_10_EXP DBL_MAX_10_EXP
+#define WFDB_GAIN_EPSILON DBL_EPSILON
+#define WFDB_GROUP_MAX UINT_MAX
+#define WFDB_SIGNAL_MAX UINT_MAX
+#define WFDB_ANNOTATOR_MAX UINT_MAX
 
 /* The 'WFDB_Time' type is traditionally defined as a long integer.
    However, if the preprocessor symbol WFDB_LARGETIME is defined prior
    to including this file, it is defined as a 'long long' instead. */
 #ifndef WFDB_LARGETIME
-typedef long 	     WFDB_Time;	    /* units are sample intervals */
-# define WFDB_TIME_MIN              LONG_MIN
-# define WFDB_TIME_MAX              LONG_MAX
-# define WFDB_TIME_PRINTF_MODIFIER  "l"
-# define WFDB_TIME_SCANF_MODIFIER   "l"
+typedef long WFDB_Time; /* units are sample intervals */
+#define WFDB_TIME_MIN LONG_MIN
+#define WFDB_TIME_MAX LONG_MAX
+#define WFDB_TIME_PRINTF_MODIFIER "l"
+#define WFDB_TIME_SCANF_MODIFIER "l"
 #else
-# if defined(_MSC_VER) && _MSC_VER < 1400
-typedef __int64      WFDB_Time;
-#  define WFDB_TIME_MIN             _I64_MIN
-#  define WFDB_TIME_MAX             _I64_MAX
-# else
-typedef long long    WFDB_Time;
-#  define WFDB_TIME_MIN             LLONG_MIN
-#  define WFDB_TIME_MAX             LLONG_MAX
-# endif
-# ifdef _WIN32
-#  define WFDB_TIME_PRINTF_MODIFIER "I64"
-#  define WFDB_TIME_SCANF_MODIFIER  "I64"
-# else
-#  define WFDB_TIME_PRINTF_MODIFIER "ll"
-#  define WFDB_TIME_SCANF_MODIFIER  "ll"
-# endif
+#if defined(_MSC_VER) && _MSC_VER < 1400
+typedef __int64 WFDB_Time;
+#define WFDB_TIME_MIN _I64_MIN
+#define WFDB_TIME_MAX _I64_MAX
+#else
+typedef long long WFDB_Time;
+#define WFDB_TIME_MIN LLONG_MIN
+#define WFDB_TIME_MAX LLONG_MAX
+#endif
+#ifdef _WIN32
+#define WFDB_TIME_PRINTF_MODIFIER "I64"
+#define WFDB_TIME_SCANF_MODIFIER "I64"
+#else
+#define WFDB_TIME_PRINTF_MODIFIER "ll"
+#define WFDB_TIME_SCANF_MODIFIER "ll"
+#endif
 
 /* A number of WFDB library functions use WFDB_Time as either a
    parameter or return value, so the library includes two versions of
    each of these functions.  The following preprocessor definitions
    ensure that 'isigsettime' refers to the correct version. */
-# define isigsettime  wfdb_isigsettime_LL
-# define isgsettime   wfdb_isgsettime_LL
-# define tnextvec     wfdb_tnextvec_LL
-# define iannsettime  wfdb_iannsettime_LL
-# define timstr       wfdb_timstr_LL
-# define mstimstr     wfdb_mstimstr_LL
-# define strtim       wfdb_strtim_LL
-# define sample       wfdb_sample_LL
-# define getann       wfdb_getann_LL
-# define ungetann     wfdb_ungetann_LL
-# define putann       wfdb_putann_LL
-# define getseginfo   wfdb_getseginfo_LL
+#define isigsettime wfdb_isigsettime_LL
+#define isgsettime wfdb_isgsettime_LL
+#define tnextvec wfdb_tnextvec_LL
+#define iannsettime wfdb_iannsettime_LL
+#define timstr wfdb_timstr_LL
+#define mstimstr wfdb_mstimstr_LL
+#define strtim wfdb_strtim_LL
+#define sample wfdb_sample_LL
+#define getann wfdb_getann_LL
+#define ungetann wfdb_ungetann_LL
+#define putann wfdb_putann_LL
+#define getseginfo wfdb_getseginfo_LL
 #endif
 
 /* The following macros can be used to construct format strings for
@@ -209,19 +211,19 @@ typedef long long    WFDB_Time;
    WFDB_MAXSPF to determine array sizes, but (since WFDB library version 10.2)
    there are no longer any fixed limits imposed by the WFDB library.
 */
-#define WFDB_MAXANN    2   /* maximum number of input or output annotators */
-#define	WFDB_MAXSIG   32   /* maximum number of input or output signals */
-#define WFDB_MAXSPF    4   /* maximum number of samples per signal per frame */
-#define WFDB_MAXRNL   50   /* maximum length of record name */
-#define WFDB_MAXUSL   50   /* maximum length of WFDB_siginfo `.units' string */
-#define WFDB_MAXDSL  100   /* maximum length of WFDB_siginfo `.desc' string */
+#define WFDB_MAXANN 2   /* maximum number of input or output annotators */
+#define WFDB_MAXSIG 32  /* maximum number of input or output signals */
+#define WFDB_MAXSPF 4   /* maximum number of samples per signal per frame */
+#define WFDB_MAXRNL 50  /* maximum length of record name */
+#define WFDB_MAXUSL 50  /* maximum length of WFDB_siginfo `.units' string */
+#define WFDB_MAXDSL 100 /* maximum length of WFDB_siginfo `.desc' string */
 
 /* wfdb_fopen mode values (WFDB_anninfo '.stat' values) */
-#define WFDB_READ      0   /* standard input annotation file */
-#define WFDB_WRITE     1   /* standard output annotation file */
-#define WFDB_AHA_READ  2   /* AHA-format input annotation file */
-#define WFDB_AHA_WRITE 3   /* AHA-format output annotation file */
-#define WFDB_APPEND    4   /* for output info files */
+#define WFDB_READ 0      /* standard input annotation file */
+#define WFDB_WRITE 1     /* standard output annotation file */
+#define WFDB_AHA_READ 2  /* AHA-format input annotation file */
+#define WFDB_AHA_WRITE 3 /* AHA-format output annotation file */
+#define WFDB_APPEND 4    /* for output info files */
 
 /* WFDB_siginfo '.fmt' values
 FMT_LIST is suitable as an initializer for a static array; it lists all of
@@ -239,77 +241,80 @@ the legal values for the format field in a WFDB_siginfo structure.
   24	24-bit 2's complement amplitudes, low byte first
   32	32-bit 2's complement amplitudes, low byte first
 */
-#define WFDB_FMT_LIST {0, 8, 16, 61, 80, 160, 212, 310, 311, 24, 32}
-#define WFDB_NFMTS	  11    /* number of items in WFDB_FMT_LIST */
+#define WFDB_FMT_LIST \
+  { 0, 8, 16, 61, 80, 160, 212, 310, 311, 24, 32 }
+#define WFDB_NFMTS 11 /* number of items in WFDB_FMT_LIST */
 
 /* Default signal specifications */
-#define WFDB_DEFFREQ	250.0  /* default sampling frequency (Hz) */
-#define WFDB_DEFGAIN	200.0  /* default value for gain (adu/physical unit) */
-#define WFDB_DEFRES	12     /* default value for ADC resolution (bits) */
+#define WFDB_DEFFREQ 250.0 /* default sampling frequency (Hz) */
+#define WFDB_DEFGAIN 200.0 /* default value for gain (adu/physical unit) */
+#define WFDB_DEFRES 12     /* default value for ADC resolution (bits) */
 
 /* getvec operating modes */
-#define WFDB_LOWRES   	0	/* return one sample per signal per frame */
-#define WFDB_HIGHRES	1	/* return each sample of oversampled signals,
-				   duplicating samples of other signals */
-#define WFDB_GVPAD	2	/* replace invalid samples with previous valid
-				   samples */
+#define WFDB_LOWRES 0 /* return one sample per signal per frame */
+#define WFDB_HIGHRES                              \
+  1 /* return each sample of oversampled signals, \
+       duplicating samples of other signals */
+#define WFDB_GVPAD                                 \
+  2 /* replace invalid samples with previous valid \
+       samples */
 
 /* calinfo '.caltype' values
 WFDB_AC_COUPLED and WFDB_DC_COUPLED are used in combination with the pulse
 shape definitions below to characterize calibration pulses. */
-#define WFDB_AC_COUPLED	0	/* AC coupled signal */
-#define WFDB_DC_COUPLED	1	/* DC coupled signal */
-#define WFDB_CAL_SQUARE	2	/* square wave pulse */
-#define WFDB_CAL_SINE	4	/* sine wave pulse */
-#define WFDB_CAL_SAWTOOTH	6	/* sawtooth pulse */
-#define WFDB_CAL_UNDEF	8	/* undefined pulse shape */
+#define WFDB_AC_COUPLED 0   /* AC coupled signal */
+#define WFDB_DC_COUPLED 1   /* DC coupled signal */
+#define WFDB_CAL_SQUARE 2   /* square wave pulse */
+#define WFDB_CAL_SINE 4     /* sine wave pulse */
+#define WFDB_CAL_SAWTOOTH 6 /* sawtooth pulse */
+#define WFDB_CAL_UNDEF 8    /* undefined pulse shape */
 
 /* Structure definitions */
-struct WFDB_siginfo {	/* signal information structure */
-    char *fname;	/* filename of signal file */
-    char *desc;		/* signal description */
-    char *units;	/* physical units (mV unless otherwise specified) */
-    WFDB_Gain gain;	/* gain (ADC units/physical unit, 0: uncalibrated) */
-    WFDB_Sample initval; 	/* initial value (that of sample number 0) */
-    WFDB_Group group;	/* signal group number */
-    int fmt;		/* format (8, 16, etc.) */
-    int spf;		/* samples per frame (>1 for oversampled signals) */
-    int bsize;		/* block size (for character special files only) */
-    int adcres;		/* ADC resolution in bits */
-    int adczero;	/* ADC output given 0 VDC input */
-    int baseline;	/* ADC output given 0 physical units input */
-    long nsamp;		/* number of samples (0: unspecified) */
-    int cksum;		/* 16-bit checksum of all samples */
+struct WFDB_siginfo {  /* signal information structure */
+  char *fname;         /* filename of signal file */
+  char *desc;          /* signal description */
+  char *units;         /* physical units (mV unless otherwise specified) */
+  WFDB_Gain gain;      /* gain (ADC units/physical unit, 0: uncalibrated) */
+  WFDB_Sample initval; /* initial value (that of sample number 0) */
+  WFDB_Group group;    /* signal group number */
+  int fmt;             /* format (8, 16, etc.) */
+  int spf;             /* samples per frame (>1 for oversampled signals) */
+  int bsize;           /* block size (for character special files only) */
+  int adcres;          /* ADC resolution in bits */
+  int adczero;         /* ADC output given 0 VDC input */
+  int baseline;        /* ADC output given 0 physical units input */
+  long nsamp;          /* number of samples (0: unspecified) */
+  int cksum;           /* 16-bit checksum of all samples */
 };
 
-struct WFDB_calinfo {	/* calibration information structure */
-    double low;		/* low level of calibration pulse in physical units */
-    double high;	/* high level of calibration pulse in physical units */
-    double scale;	/* customary plotting scale (physical units per cm) */
-    char *sigtype;	/* signal type */
-    char *units;	/* physical units */
-    int caltype;	/* calibration pulse type (see definitions above) */
+struct WFDB_calinfo { /* calibration information structure */
+  double low;         /* low level of calibration pulse in physical units */
+  double high;        /* high level of calibration pulse in physical units */
+  double scale;       /* customary plotting scale (physical units per cm) */
+  char *sigtype;      /* signal type */
+  char *units;        /* physical units */
+  int caltype;        /* calibration pulse type (see definitions above) */
 };
 
-struct WFDB_anninfo {	/* annotator information structure */
-    char *name;		/* annotator name */
-    int stat;		/* file type/access code (READ, WRITE, etc.) */
+struct WFDB_anninfo { /* annotator information structure */
+  char *name;         /* annotator name */
+  int stat;           /* file type/access code (READ, WRITE, etc.) */
 };
 
-struct WFDB_ann {	/* annotation structure */
-    WFDB_Time time;	/* annotation time, in sample intervals from
-			   the beginning of the record */
-    char anntyp;	/* annotation type (< ACMAX, see <wfdb/ecgcodes.h> */
-    signed char subtyp;	/* annotation subtype */
-    unsigned char chan;	/* channel number */
-    signed char num;	/* annotator number */
-    unsigned char *aux;	/* pointer to auxiliary information */
+struct WFDB_ann {     /* annotation structure */
+  WFDB_Time time;     /* annotation time, in sample intervals from
+                         the beginning of the record */
+  char anntyp;        /* annotation type (< ACMAX, see <wfdb/ecgcodes.h> */
+  signed char subtyp; /* annotation subtype */
+  unsigned char chan; /* channel number */
+  signed char num;    /* annotator number */
+  unsigned char *aux; /* pointer to auxiliary information */
 };
 
-struct WFDB_seginfo {	/* segment record structure */
-    char recname[WFDB_MAXRNL+1];   /* segment name */
-    WFDB_Time nsamp;		   /* number of samples in segment */
-    WFDB_Time samp0;		   /* sample number of first sample */
+struct WFDB_seginfo {            /* segment record structure */
+  char recname[WFDB_MAXRNL + 1]; /* segment name */
+  WFDB_Time nsamp;               /* number of samples in segment */
+  WFDB_Time samp0;               /* sample number of first sample */
 };
 
 /* Composite data types */
@@ -320,42 +325,51 @@ typedef struct WFDB_ann WFDB_Annotation;
 typedef struct WFDB_seginfo WFDB_Seginfo;
 
 /* Dynamic memory allocation macros. */
-#define MEMERR(P, N, S)                                                 \
-    do {                                                                \
-        wfdb_error("WFDB: can't allocate (%lu*%lu) bytes for %s\n",     \
-                   (unsigned long)N, (unsigned long)S, #P);             \
-        if (wfdb_me_fatal()) exit(1);                                   \
-    } while (0)
-#define SFREE(P) do { if (P) { free (P); P = 0; } } while (0)
-#define SUALLOC(P, N, S)                                                \
-    do {                                                                \
-        size_t WFDB_tmp1 = (N), WFDB_tmp2 = (S);                        \
-        if (WFDB_tmp1 == 0 || WFDB_tmp2 == 0)                           \
-            WFDB_tmp1 = WFDB_tmp2 = 1;                                  \
-        if (!(P = calloc(WFDB_tmp1, WFDB_tmp2)))                        \
-            MEMERR(P, WFDB_tmp1, WFDB_tmp2);                            \
-    } while (0)
-#define SALLOC(P, N, S) do { SFREE(P); SUALLOC(P, (N), (S)); } while (0)
-#define SREALLOC(P, N, S) \
-    do {                                                                \
-        size_t WFDB_tmp1 = (N), WFDB_tmp2 = (S);                        \
-        if (!(P = ((WFDB_tmp1 == 0 || WFDB_tmp2 == 0)                   \
-                   ? realloc(P, 1)                                      \
-                   : ((WFDB_tmp1 > (size_t) -1 / WFDB_tmp2)             \
-                      ? 0 : realloc(P, WFDB_tmp1 * WFDB_tmp2)))))       \
-            MEMERR(P, WFDB_tmp1, WFDB_tmp2);                            \
-    } while (0)
-#define SSTRCPY(P, Q)                                                   \
-    do {                                                                \
-        const char *WFDB_tmp = (Q);                                     \
-        if (WFDB_tmp) {                                                 \
-            SALLOC(P, (size_t)strlen(WFDB_tmp)+1, 1);                   \
-            strcpy(P, WFDB_tmp);                                        \
-        }                                                               \
-    } while (0)
+#define MEMERR(P, N, S)                                         \
+  do {                                                          \
+    wfdb_error("WFDB: can't allocate (%lu*%lu) bytes for %s\n", \
+               (unsigned long)N, (unsigned long)S, #P);         \
+    if (wfdb_me_fatal()) exit(1);                               \
+  } while (0)
+#define SFREE(P) \
+  do {           \
+    if (P) {     \
+      free(P);   \
+      P = 0;     \
+    }            \
+  } while (0)
+#define SUALLOC(P, N, S)                                                      \
+  do {                                                                        \
+    size_t WFDB_tmp1 = (N), WFDB_tmp2 = (S);                                  \
+    if (WFDB_tmp1 == 0 || WFDB_tmp2 == 0) WFDB_tmp1 = WFDB_tmp2 = 1;          \
+    if (!(P = calloc(WFDB_tmp1, WFDB_tmp2))) MEMERR(P, WFDB_tmp1, WFDB_tmp2); \
+  } while (0)
+#define SALLOC(P, N, S)   \
+  do {                    \
+    SFREE(P);             \
+    SUALLOC(P, (N), (S)); \
+  } while (0)
+#define SREALLOC(P, N, S)                                         \
+  do {                                                            \
+    size_t WFDB_tmp1 = (N), WFDB_tmp2 = (S);                      \
+    if (!(P = ((WFDB_tmp1 == 0 || WFDB_tmp2 == 0)                 \
+                   ? realloc(P, 1)                                \
+                   : ((WFDB_tmp1 > (size_t)-1 / WFDB_tmp2)        \
+                          ? 0                                     \
+                          : realloc(P, WFDB_tmp1 * WFDB_tmp2))))) \
+      MEMERR(P, WFDB_tmp1, WFDB_tmp2);                            \
+  } while (0)
+#define SSTRCPY(P, Q)                             \
+  do {                                            \
+    const char *WFDB_tmp = (Q);                   \
+    if (WFDB_tmp) {                               \
+      SALLOC(P, (size_t)strlen(WFDB_tmp) + 1, 1); \
+      strcpy(P, WFDB_tmp);                        \
+    }                                             \
+  } while (0)
 
 /* Function types */
-#ifndef _WINDLL	/* for everything *except* MS Windows applications */
+#ifndef _WINDLL /* for everything *except* MS Windows applications */
 typedef char *FSTRING;
 typedef const char *FCONSTSTRING;
 typedef WFDB_Date FDATE;
@@ -367,10 +381,10 @@ typedef WFDB_Sample FSAMPLE;
 typedef WFDB_Time FSITIME;
 typedef void FVOID;
 #else
-#ifndef _WIN32	/* for 16-bit MS Windows applications using the WFDB DLL */
-  /* typedefs don't work properly with _far or _pascal -- must use #defines */
-#define FSTRING char _far * _pascal
-#define FCONSTSTRING const char _far * _pascal
+#ifndef _WIN32 /* for 16-bit MS Windows applications using the WFDB DLL */
+/* typedefs don't work properly with _far or _pascal -- must use #defines */
+#define FSTRING char _far *_pascal
+#define FCONSTSTRING const char _far *_pascal
 #define FDATE WFDB_Date _far _pascal
 #define FDOUBLE double _far _pascal
 #define FFREQUENCY WFDB_Frequency _far _pascal
@@ -379,20 +393,20 @@ typedef void FVOID;
 #define FSAMPLE WFDB_Sample _far _pascal
 #define FSITIME WFDB_Time _far _pascal
 #define FVOID void _far _pascal
-#else		/* for 32-bit MS Windows applications using the WFDB DLL */
+#else /* for 32-bit MS Windows applications using the WFDB DLL */
 #ifndef CALLBACK
-#define CALLBACK __stdcall	/* from windef.h */
+#define CALLBACK __stdcall /* from windef.h */
 #endif
-#define FSTRING __declspec (dllexport) char * CALLBACK
-#define FCONSTSTRING __declspec (dllexport) const char * CALLBACK
-#define FDATE __declspec (dllexport) WFDB_Date CALLBACK
-#define FDOUBLE __declspec (dllexport) double CALLBACK
-#define FFREQUENCY __declspec (dllexport) WFDB_Frequency CALLBACK
-#define FINT __declspec (dllexport) int CALLBACK
-#define FLONGINT __declspec (dllexport) long CALLBACK
-#define FSAMPLE __declspec (dllexport) WFDB_Sample CALLBACK
-#define FSITIME __declspec (dllexport) WFDB_Time CALLBACK
-#define FVOID __declspec (dllexport) void CALLBACK
+#define FSTRING __declspec(dllexport) char *CALLBACK
+#define FCONSTSTRING __declspec(dllexport) const char *CALLBACK
+#define FDATE __declspec(dllexport) WFDB_Date CALLBACK
+#define FDOUBLE __declspec(dllexport) double CALLBACK
+#define FFREQUENCY __declspec(dllexport) WFDB_Frequency CALLBACK
+#define FINT __declspec(dllexport) int CALLBACK
+#define FLONGINT __declspec(dllexport) long CALLBACK
+#define FSAMPLE __declspec(dllexport) WFDB_Sample CALLBACK
+#define FSITIME __declspec(dllexport) WFDB_Time CALLBACK
+#define FVOID __declspec(dllexport) void CALLBACK
 #endif
 #endif
 
@@ -404,14 +418,13 @@ extern "C" {
 /* Define function prototypes for ANSI C compilers and C++ compilers */
 #ifdef wfdb_PROTO
 extern FINT annopen(char *record, const WFDB_Anninfo *aiarray,
-		    unsigned int nann);
+                    unsigned int nann);
 extern FINT isigopen(char *record, WFDB_Siginfo *siarray, int nsig);
-extern FINT osigopen(char *record, WFDB_Siginfo *siarray,
-		     unsigned int nsig);
+extern FINT osigopen(char *record, WFDB_Siginfo *siarray, unsigned int nsig);
 extern FINT osigfopen(const WFDB_Siginfo *siarray, unsigned int nsig);
-extern FINT wfdbinit(char *record,
-		     const WFDB_Anninfo *aiarray, unsigned int nann,
-		     WFDB_Siginfo *siarray, unsigned int nsig);
+extern FINT wfdbinit(char *record, const WFDB_Anninfo *aiarray,
+                     unsigned int nann, WFDB_Siginfo *siarray,
+                     unsigned int nsig);
 extern FINT findsig(const char *signame);
 extern FINT getspf(void);
 extern FVOID setgvmode(int mode);
@@ -431,14 +444,13 @@ extern FINT iannsettime(WFDB_Time t);
 extern FSTRING ecgstr(int annotation_code);
 extern FINT strecg(const char *annotation_mnemonic_string);
 extern FINT setecgstr(int annotation_code,
-		      const char *annotation_mnemonic_string);
+                      const char *annotation_mnemonic_string);
 extern FSTRING annstr(int annotation_code);
 extern FINT strann(const char *annotation_mnemonic_string);
 extern FINT setannstr(int annotation_code,
-		      const char *annotation_mnemonic_string);
+                      const char *annotation_mnemonic_string);
 extern FSTRING anndesc(int annotation_code);
-extern FINT setanndesc(int annotation_code,
-		       const char *annotation_description);
+extern FINT setanndesc(int annotation_code, const char *annotation_description);
 extern FVOID setafreq(WFDB_Frequency f);
 extern FFREQUENCY getafreq(void);
 extern FVOID setiafreq(WFDB_Annotator a, WFDB_Frequency f);
@@ -470,7 +482,7 @@ extern FSAMPLE sample(WFDB_Signal s, WFDB_Time t);
 extern FINT sample_valid(void);
 extern FINT calopen(const char *calibration_filename);
 extern FINT getcal(const char *description, const char *units,
-		   WFDB_Calinfo *cal);
+                   WFDB_Calinfo *cal);
 extern FINT putcal(const WFDB_Calinfo *cal);
 extern FINT newcal(const char *calibration_filename);
 extern FVOID flushcal(void);
@@ -480,7 +492,7 @@ extern FINT setinfo(char *record);
 extern FVOID wfdb_freeinfo(void);
 extern FINT newheader(char *record);
 extern FINT setheader(char *record, const WFDB_Siginfo *siarray,
-		      unsigned int nsig);
+                      unsigned int nsig);
 extern FINT setmsheader(char *record, char **segnames, unsigned int nsegments);
 extern FINT getseginfo(WFDB_Seginfo **segments);
 extern FINT wfdbgetskew(WFDB_Signal s);
@@ -511,7 +523,8 @@ extern FVOID wfdbmemerr(int exit_on_error);
 #if __GNUC__ >= 3
 __attribute__((__format__(__printf__, 1, 2)))
 #endif
-extern FVOID wfdb_error(const char *format_string, ...);
+extern FVOID
+wfdb_error(const char *format_string, ...);
 extern FINT wfdb_me_fatal(void);
 extern FCONSTSTRING wfdbversion(void);
 extern FCONSTSTRING wfdbldflags(void);
@@ -524,7 +537,7 @@ extern FCONSTSTRING wfdbdefwfdbcal(void);
 }
 #endif
 
-#ifdef wfdb_KRC	/* declare only function return types for K&R C compilers */
+#ifdef wfdb_KRC /* declare only function return types for K&R C compilers */
 extern FINT annopen(), isigopen(), osigopen(), wfdbinit(), findsig(), getspf(),
     setifreq(), getvec(), getframe(), getgvmode(), putvec(), getann(),
     ungetann(), putann(), isigsettime(), isgsettime(), iannsettime(), strecg(),
@@ -537,8 +550,8 @@ extern FINT annopen(), isigopen(), osigopen(), wfdbinit(), findsig(), getspf(),
     wfdbgetskew(), sample_valid(), wfdb_me_fatal();
 extern FLONGINT wfdbgetstart();
 extern FSAMPLE muvadu(), physadu(), sample();
-extern FSTRING ecgstr(), annstr(), anndesc(), timstr(), mstimstr(),
-    datstr(), getwfdb(), getinfo(), wfdberror(), wfdbfile();
+extern FSTRING ecgstr(), annstr(), anndesc(), timstr(), mstimstr(), datstr(),
+    getwfdb(), getinfo(), wfdberror(), wfdbfile();
 extern FSITIME strtim(), tnextvec();
 extern FDATE strdat();
 extern FVOID setafreq(), setgvmode(), wfdb_freeinfo(), wfdbquit(), wfdbquiet(),
@@ -572,30 +585,30 @@ extern FDOUBLE aduphys(), getbasecount();
   Non-conforming compilers for MS-Windows may or may not predefine _WINDOWS;
   if you use such a compiler, you may need to define _WINDOWS manually. */
 #if defined(__STDC__) || defined(_WINDOWS)
-# include <stdlib.h>
+#include <stdlib.h>
 #else
 extern char *getenv();
 extern void exit();
 typedef long time_t;
-# ifdef HAVE_MALLOC_H
-# include <malloc.h>
-# else
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#else
 extern char *malloc(), *calloc(), *realloc();
-# endif
-# ifdef ISPRINTF
+#endif
+#ifdef ISPRINTF
 extern int sprintf();
-# else
-#  ifndef MSDOS
+#else
+#ifndef MSDOS
 extern char *sprintf();
-#  endif
-# endif
+#endif
+#endif
 #endif
 
 #ifndef BSD
-# include <string.h>
-#else		/* for Berkeley UNIX only */
-# include <strings.h>
-# define strchr index
+#include <string.h>
+#else /* for Berkeley UNIX only */
+#include <strings.h>
+#define strchr index
 #endif
 
 #endif
