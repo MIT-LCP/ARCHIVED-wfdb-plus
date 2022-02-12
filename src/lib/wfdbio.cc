@@ -428,7 +428,7 @@ OS- and compiler-dependent definitions:
 
    For MS-DOS/MS-Windows compilers.  Note that not all such compilers
    predefine the symbol MSDOS;  for those that do not, MSDOS is usually defined
-   by a compiler command-line option in the "make" description file. */ 
+   by a compiler command-line option in the "make" description file. */
 #ifdef MSDOS
 #define DSEP	'\\'
 #define PSEP	';'
@@ -534,7 +534,7 @@ int wfdb_parse_path(const char *p)
 	if (*q) q++;
     }
     return (0);
-}	
+}
 
 
 /* wfdb_getiwfdb reads a new value for WFDB from the file named by the second
@@ -573,7 +573,7 @@ static const char *wfdb_getiwfdb(char **p)
 		(*p)[--len] = '\0';
 	    (void)fclose(wfdbpfile);
 	}
-    }	
+    }
     if (*p != NULL && **p == '@') {
 	wfdb_error("getwfdb: files nested too deeply\n");
 	**p = 0;
@@ -724,8 +724,8 @@ void wfdb_addtopath(const char *s)
 	if ((c1->next = c0->next) != NULL)
 	    (c1->next)->prev = c1;
 	c0->next = c1;
-    }	
-    else { /* no initial ".";  insert the node at the head of the path */ 
+    }
+    else { /* no initial ".";  insert the node at the head of the path */
 	wfdb_path_list = c1;
 	c1->prev = NULL;
 	c1->next = c0;
@@ -1143,7 +1143,7 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode)
 	   provided that that form is distinct. */
 	SSTRCPY(long_filename, wfdb_filename);
 	spr2(&wfdb_filename, buf, s);
-	if (strcmp(wfdb_filename, long_filename) && 
+	if (strcmp(wfdb_filename, long_filename) &&
 	    (ifile = wfdb_fopen(wfdb_filename, RB)) != NULL) {
 	    wfdb_addtopath(wfdb_filename);
 	    SFREE(long_filename);
@@ -1857,12 +1857,12 @@ static long nf_get_range(netfile* nf, long startb, long len, char *rbuf)
 		}
 		else {	/* attempt to update cache failed */
 		    wfdb_error(
-	     "nf_get_range: couldn't read %ld bytes of %s starting at %ld\n", 
+	     "nf_get_range: couldn't read %ld bytes of %s starting at %ld\n",
 	                       len, nf->url, startb);
 		    len = 0L;
 		}
-	    } 
-      
+	    }
+
 	    /* move cached data to the return buffer */
 	    rp = nf->data + startb - nf->base_addr;
 	}
@@ -1886,7 +1886,7 @@ static long nf_get_range(netfile* nf, long startb, long len, char *rbuf)
     }
 
     else  /* cannot use range requests -- cache contains full file */
-	rp = nf->data + startb;		
+	rp = nf->data + startb;
 
     if (rp != NULL && len > 0)
 	memcpy(rbuf, rp, len);
@@ -1941,7 +1941,7 @@ static int nf_fgetc(netfile *nf)
 
 static char* nf_fgets(char *s, int size, netfile *nf)
 {
-    int c = 0, i = 0; 
+    int c = 0, i = 0;
 
     if (s == NULL) return (NULL);
     while (c != '\n' && i < (size-1) && (c = nf_fgetc(nf)) != EOF)
@@ -1987,7 +1987,7 @@ static int nf_fseek(netfile* nf, long offset, int whence)
 	if (offset <= 0 && offset >= -nf->cont_len) {
 	  nf->pos = nf->cont_len + offset;
 	  nf->err = NF_NO_ERR;
-	  ret = 0; 
+	  ret = 0;
 	}
 	break;
       default:
@@ -2261,7 +2261,7 @@ char FAR *wgetenv(char far *var)
 {
     char FAR *ep = GetDOSEnvironment();
     int l = _fstrlen(var);
-    
+
     if (var == (char FAR *)NULL || *var = '\0') return ((char FAR *)NULL);
     while (*ep) {
 	if (_fstrncmp(ep, var, l) == 0 && *(ep+l) == '=')
