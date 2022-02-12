@@ -14,7 +14,7 @@ Directories:
 - `fortran`: Fortran wrappers for the WFDB library.
 - `wave`: The Linux desktop waveform viewer, WAVE.
 
-## Installation
+## Building and Installing
 
 WFDB is officially supported on Linux.
 
@@ -25,7 +25,11 @@ Eg. For Debian and Ubuntu:
 ```sh
 sudo apt-get update && sudo apt-get install -y gcc curl cmake
 
-# TODO after cmake integration
+cd src
+# Create the build artifacts
+cmake -S . -b build
+# Compile the code
+cmake --build build
 
 ```
 
