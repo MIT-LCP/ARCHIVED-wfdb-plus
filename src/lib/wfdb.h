@@ -366,7 +366,7 @@ typedef long FLONGINT;
 typedef WFDB_Sample FSAMPLE;
 typedef WFDB_Time FSITIME;
 typedef void FVOID;
-#else		
+#else
 #ifndef _WIN32	/* for 16-bit MS Windows applications using the WFDB DLL */
   /* typedefs don't work properly with _far or _pascal -- must use #defines */
 #define FSTRING char _far * _pascal
