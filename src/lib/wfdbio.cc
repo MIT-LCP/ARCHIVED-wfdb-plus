@@ -155,6 +155,8 @@ obtained if necessary by defining the symbol NOSTRTOK when compiling this
 module.
 */
 
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "wfdblib.h"

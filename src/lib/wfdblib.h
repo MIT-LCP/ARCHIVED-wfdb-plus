@@ -32,65 +32,6 @@ symbols reserved to the library begin with the characters "wfdb_".
 
 #include "wfdb.h"
 
-/* MS-Windows users are strongly advised to compile the WFDB library using the
-   free Cygwin tools (www.cygwin.com).  Use of other compilers may be possible
-   but is not supported.
-
-   Cygwin users:  Note that the symbols _WINDOWS, _WINDLL, WIN32, etc. are
-   not defined and should not be defined when compiling the WFDB software
-   package using gcc.  Cygwin's POSIX emulation layer avoids the need for
-   the various workarounds required when using other compilers under
-   MS-Windows.
-
-   If you are using another MS-Windows compiler, you will need these
-   workarounds, and you should be careful to define _WINDOWS, _WINDLL, and
-   _WIN32 as appropriate.  Older versions of the WFDB library were successfully
-   compiled under MS-DOS and under 16-bit versions of MS-Windows, but the
-   conditionally compiled code written to support these platforms has not been
-   tested recently.
-
-   Define the symbol _WINDLL if this library is to be compiled as a Microsoft
-   Windows DLL.  Note that a DLL's private functions (such as those listed
-   below) *cannot* be called by Windows user programs, which can call only DLL
-   functions that use the Pascal calling interface (see wfdb.h).  To compile
-   this library for use in a Microsoft Windows application, but *not* as a DLL,
-   define the symbol _WINDOWS instead of _WINDLL. */
-/* #define _WINDLL */
-
-#if defined(_WINDLL) && !defined(_WINDOWS)
-#define _WINDOWS
-#endif
-
-#if defined(_WIN16) && !defined(_WINDOWS)
-#define _WINDOWS
-#endif
-
-#if defined(_WIN32) && !defined(_WINDOWS)
-#define _WINDOWS
-#endif
-
-#if defined(_WINDOWS) && !defined(_WIN16) && !defined(_WIN32)
-#define _WIN16
-#endif
-
-/* Define the symbol MSDOS if this library is to be used under MS-DOS or MS
-   Windows.  Note: MSDOS is predefined by some MS-DOS and MS Windows compilers.
-*/
-#if defined(_WINDOWS)
-#if !defined(MSDOS)
-#define MSDOS
-#endif
-#endif
-
-/* Macintosh users are strongly advised to use Mac OS X or later.  If you are
-   doing so, no special configuration is needed, and you may ignore this
-   section.
-
-   If you are running Mac OS 9 or earlier, you may be able to use the WFDB
-   software package, but this configuration has not been tested for many years,
-   and is not supported!  If you would like to try it, define MAC. */
-/* #define MAC */
-
 /* DEFWFDB is the default value of the WFDB path if the WFDB environment
    variable is not set.  This value is edited by the configuration script
    (../configure), which also edits this block of comments to match.
@@ -111,27 +52,6 @@ symbols reserved to the library begin with the characters "wfdb_".
 #define DEFWFDB ". DBDIR http://physionet.org/physiobank/database"
 #endif
 
-/* Mac OS 9 and earlier, only:  The value of DEFWFDB given below specifies
-   that the WFDB path is to be read from the file udb/dbpath.mac on the third
-   edition of the MIT-BIH Arrhythmia Database CD-ROM (which has a volume name
-   of `MITADB3');  you may prefer to use a file on a writable disk for this
-   purpose, to make reconfiguration possible.  See getwfdb() in wfdbio.c for
-   further information.
-
-   If the version of "ISO 9660 File Access" in the "System:Extensions" folder
-   is earlier than 5.0, either update your system software (recommended) or
-   define FIXISOCD. */
-
-#ifdef MAC
-/* #define FIXISOCD */
-#ifdef FIXISOCD
-#define DEFWFDB "@MITADB3:UDB:DBPATH.MAC;1"
-#else
-#define DEFWFDB "@MITADB3:UDB:DBPATH.MAC"
-#define __STDC__
-#endif
-#endif
-
 /* DEFWFDBCAL is the name of the default WFDB calibration file, used if the
    WFDBCAL environment variable is not set.  This name need not include path
    information if the calibration file is located in a directory included in
@@ -149,11 +69,9 @@ symbols reserved to the library begin with the characters "wfdb_".
    DEFWFDBANNSORT is non-zero).  Sorting is done by invoking 'sortann' (see
    ../app/sortann.c) as a separate process;  since this cannot be done from
    an MS-Windows DLL, sorting is disabled by default in this case. */
-#if defined(_WINDLL)
-#define DEFWFDBANNSORT 0
-#else
+
+// TODO(cx1111): Remove the need for this variable
 #define DEFWFDBANNSORT 1
-#endif
 
 /* When reading multifrequency records, getvec() can operate in two modes:
    WFDB_LOWRES (returning one sample per signal per frame), or WFDB_HIGHRES
@@ -164,32 +82,11 @@ symbols reserved to the library begin with the characters "wfdb_".
    is not set, the value of DEFWFDBMODE determines the mode. */
 #define DEFWFDBGVMODE WFDB_LOWRES
 
-/* putenv() is available in POSIX, SVID, and BSD Unices and in MS-DOS and
-   32-bit MS Windows, but not under 16-bit MS Windows or under MacOS.  If it is
-   available, getwfdb() (in wfdbio.c) detects when the environment variables
-   WFDB, WFDBCAL, WFDBANNSORT, and WFDBGVMODE are not set, and sets them
-   according to DEFWFDB, DEFWFDBCAL, DEFWFDBANNSORT, and DEFWFDBGVMODE as
-   needed using putenv().  This feature is useful mainly for programs such as
-   WAVE, where these variables are set interactively and it is useful to show
-   their default values to the user; setwfdb() and getwfdb() do not depend on
-   it.
-*/
-#if !defined(_WIN16) && !defined(MAC)
+// TODO(cx1111): Remove the need for this variable
 #define HAS_PUTENV
-#endif
 
 #ifndef FILE
 #include <stdio.h>
-/* stdin/stdout may not be defined in some environments (e.g., for MS Windows
-   DLLs).  Defining them as NULL here allows the WFDB library to be compiled in
-   such environments (it does not allow use of stdin/stdout when the operating
-   environment does not provide them, however). */
-#ifndef stdin
-#define stdin NULL
-#endif
-#ifndef stdout
-#define stdout NULL
-#endif
 #endif
 
 #ifndef TRUE
@@ -254,36 +151,9 @@ typedef struct WFDB_FILE WFDB_FILE;
 
 #endif
 
-#ifdef _WINDOWS
-#ifndef _WIN32 /* these definitions are needed for 16-bit MS Windows only */
-#define strcat _fstrcat
-#define strchr _fstrchr
-#define strcmp _fstrcmp
-#define strcpy _fstrcpy
-#define strlen _fstrlen
-#define strncmp _fstrncmp
-#define strtok _fstrtok
-#endif
-#endif
-
-/* Define MKDIR as either the one-argument mkdir() (for the native MSDOS and
-   MS-Windows API) or the standard two-argument mkdir() (everywhere else). */
-#ifndef MKDIR
-#ifdef MSDOS
-#include <direct.h>
-#define MKDIR(D, P) mkdir((D))
-#else
 #include <sys/stat.h>
 #define MKDIR(D, P) mkdir((D), (P))
-#endif
-#endif
 
-/* Define function prototypes for ANSI C, MS Windows C, and C++ compilers */
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus) || \
-    defined(_WINDOWS)
-#if defined(__cplusplus) || defined(c_plusplus)
-extern "C" {
-#endif
 
 /* These functions are defined in wfdbio.c */
 extern int wfdb_fclose(WFDB_FILE *fp);
@@ -297,20 +167,12 @@ extern void wfdb_p16(unsigned int x, WFDB_FILE *fp);
 extern void wfdb_p32(long x, WFDB_FILE *fp);
 extern int wfdb_parse_path(const char *wfdb_path);
 extern void wfdb_addtopath(const char *pathname);
-#if __GNUC__ >= 3
 __attribute__((__format__(__printf__, 2, 3)))
-#endif
-extern int
-wfdb_asprintf(char **buffer, const char *format, ...);
+extern int wfdb_asprintf(char **buffer, const char *format, ...);
 extern WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
-#if __GNUC__ >= 3
-__attribute__((__format__(__printf__, 2, 3)))
-#endif
-extern int
-wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
+extern int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
 extern void wfdb_setirec(const char *record_name);
 extern char *wfdb_getirec(void);
-
 extern void wfdb_clearerr(WFDB_FILE *fp);
 extern int wfdb_feof(WFDB_FILE *fp);
 extern int wfdb_ferror(WFDB_FILE *fp);
@@ -334,33 +196,3 @@ extern int wfdb_oinfoclose(void);
 /* These functions are defined in annot.c */
 extern void wfdb_anclose(void);
 extern void wfdb_oaflush(void);
-
-#if defined(__cplusplus) || defined(c_plusplus)
-}
-#endif
-
-#else /* declare only function return types for non-ANSI C compilers */
-
-extern char *wfdb_getirec();
-extern int wfdb_fclose(), wfdb_checkname(), wfdb_g16(), wfdb_parse_path(),
-    wfdb_fprintf();
-extern long wfdb_g32();
-extern void wfdb_striphea(), wfdb_p16(), wfdb_p32(), wfdb_addtopath(),
-    wfdb_setirec(), wfdb_sampquit(), wfdb_sigclose(), wfdb_osflush(),
-    wfdb_freeinfo(), wfdb_oinfoclose(), wfdb_anclose(), wfdb_oaflush();
-extern WFDB_FILE *wfdb_open(), *wfdb_fopen();
-
-extern char *wfdb_fgets();
-extern int wfdb_feof(), wfdb_ferror(), wfdb_fflush(), wfdb_fseek(), wfdb_getc(),
-    wfdb_putc();
-extern long wfdb_ftell();
-extern size_t wfdb_fread(), wfdb_fwrite();
-extern void wfdb_clearerr();
-
-/* Some non-ANSI C libraries (e.g., version 7, BSD 4.2) lack an implementation
-   of strtok(); define NOSTRTOK to compile the portable version in wfdbio.c. */
-#ifdef NOSTRTOK
-extern char *strtok();
-#endif
-
-#endif

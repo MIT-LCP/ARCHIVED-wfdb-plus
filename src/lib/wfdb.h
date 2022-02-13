@@ -37,38 +37,6 @@ _______________________________________________________________________________
      */
 #define WFDB_NETFILES_LIBCURL 1
 
-/* Determine what type of compiler is being used. */
-#ifdef __STDC__    /* true for ANSI C compilers only */
-#define wfdb_PROTO /* function prototypes will be needed */
-#undef _WINDOWS    /* we don't want MS-Windows API in this case */
-#endif
-
-#ifdef __cplusplus /* true for some C++ compilers */
-#define wfdb_CPP
-#define wfdb_PROTO
-#endif
-
-#ifdef c_plusplus /* true for some other C++ compilers */
-#define wfdb_CPP
-#define wfdb_PROTO
-#endif
-
-#ifdef _WIN32 /* true when compiling for 32-bit MS Windows */
-#ifndef _WINDOWS
-#define _WINDOWS
-#endif
-#endif
-
-#ifdef _WINDOWS /* true when compiling for MS Windows */
-#define wfdb_PROTO
-#endif
-
-#ifndef wfdb_PROTO /* should be true for K&R C compilers only */
-#define wfdb_KRC
-#define signed
-#undef WFDB_LARGETIME
-#endif
-
 /* Simple data types */
 typedef int WFDB_Sample;             /* units are adus */
 typedef long WFDB_Date;              /* units are days */
@@ -100,29 +68,11 @@ typedef unsigned int WFDB_Annotator; /* annotator number */
 /* The 'WFDB_Time' type is traditionally defined as a long integer.
    However, if the preprocessor symbol WFDB_LARGETIME is defined prior
    to including this file, it is defined as a 'long long' instead. */
-#ifndef WFDB_LARGETIME
-typedef long WFDB_Time; /* units are sample intervals */
-#define WFDB_TIME_MIN LONG_MIN
-#define WFDB_TIME_MAX LONG_MAX
-#define WFDB_TIME_PRINTF_MODIFIER "l"
-#define WFDB_TIME_SCANF_MODIFIER "l"
-#else
-#if defined(_MSC_VER) && _MSC_VER < 1400
-typedef __int64 WFDB_Time;
-#define WFDB_TIME_MIN _I64_MIN
-#define WFDB_TIME_MAX _I64_MAX
-#else
 typedef long long WFDB_Time;
 #define WFDB_TIME_MIN LLONG_MIN
 #define WFDB_TIME_MAX LLONG_MAX
-#endif
-#ifdef _WIN32
-#define WFDB_TIME_PRINTF_MODIFIER "I64"
-#define WFDB_TIME_SCANF_MODIFIER "I64"
-#else
 #define WFDB_TIME_PRINTF_MODIFIER "ll"
 #define WFDB_TIME_SCANF_MODIFIER "ll"
-#endif
 
 /* A number of WFDB library functions use WFDB_Time as either a
    parameter or return value, so the library includes two versions of
@@ -140,7 +90,6 @@ typedef long long WFDB_Time;
 #define ungetann wfdb_ungetann_LL
 #define putann wfdb_putann_LL
 #define getseginfo wfdb_getseginfo_LL
-#endif
 
 /* The following macros can be used to construct format strings for
    printf and scanf, and related standard library functions. */
@@ -369,7 +318,6 @@ typedef struct WFDB_seginfo WFDB_Seginfo;
   } while (0)
 
 /* Function types */
-#ifndef _WINDLL /* for everything *except* MS Windows applications */
 typedef char *FSTRING;
 typedef const char *FCONSTSTRING;
 typedef WFDB_Date FDATE;
@@ -380,43 +328,8 @@ typedef long FLONGINT;
 typedef WFDB_Sample FSAMPLE;
 typedef WFDB_Time FSITIME;
 typedef void FVOID;
-#else
-#ifndef _WIN32 /* for 16-bit MS Windows applications using the WFDB DLL */
-/* typedefs don't work properly with _far or _pascal -- must use #defines */
-#define FSTRING char _far *_pascal
-#define FCONSTSTRING const char _far *_pascal
-#define FDATE WFDB_Date _far _pascal
-#define FDOUBLE double _far _pascal
-#define FFREQUENCY WFDB_Frequency _far _pascal
-#define FINT int _far _pascal
-#define FLONGINT long _far _pascal
-#define FSAMPLE WFDB_Sample _far _pascal
-#define FSITIME WFDB_Time _far _pascal
-#define FVOID void _far _pascal
-#else /* for 32-bit MS Windows applications using the WFDB DLL */
-#ifndef CALLBACK
-#define CALLBACK __stdcall /* from windef.h */
-#endif
-#define FSTRING __declspec(dllexport) char *CALLBACK
-#define FCONSTSTRING __declspec(dllexport) const char *CALLBACK
-#define FDATE __declspec(dllexport) WFDB_Date CALLBACK
-#define FDOUBLE __declspec(dllexport) double CALLBACK
-#define FFREQUENCY __declspec(dllexport) WFDB_Frequency CALLBACK
-#define FINT __declspec(dllexport) int CALLBACK
-#define FLONGINT __declspec(dllexport) long CALLBACK
-#define FSAMPLE __declspec(dllexport) WFDB_Sample CALLBACK
-#define FSITIME __declspec(dllexport) WFDB_Time CALLBACK
-#define FVOID __declspec(dllexport) void CALLBACK
-#endif
-#endif
 
-/* Specify C linkage for C++ compilers. */
-#ifdef wfdb_CPP
-extern "C" {
-#endif
-
-/* Define function prototypes for ANSI C compilers and C++ compilers */
-#ifdef wfdb_PROTO
+/* Define function prototypes */
 extern FINT annopen(char *record, const WFDB_Anninfo *aiarray,
                     unsigned int nann);
 extern FINT isigopen(char *record, WFDB_Siginfo *siarray, int nsig);
@@ -520,9 +433,7 @@ extern FINT setobsize(int output_buffer_size);
 extern FSTRING wfdbfile(const char *file_type, char *record);
 extern FVOID wfdbflush(void);
 extern FVOID wfdbmemerr(int exit_on_error);
-#if __GNUC__ >= 3
 __attribute__((__format__(__printf__, 1, 2)))
-#endif
 extern FVOID
 wfdb_error(const char *format_string, ...);
 extern FINT wfdb_me_fatal(void);
@@ -531,84 +442,5 @@ extern FCONSTSTRING wfdbldflags(void);
 extern FCONSTSTRING wfdbcflags(void);
 extern FCONSTSTRING wfdbdefwfdb(void);
 extern FCONSTSTRING wfdbdefwfdbcal(void);
-#endif
-
-#ifdef wfdb_CPP
-}
-#endif
-
-#ifdef wfdb_KRC /* declare only function return types for K&R C compilers */
-extern FINT annopen(), isigopen(), osigopen(), wfdbinit(), findsig(), getspf(),
-    setifreq(), getvec(), getframe(), getgvmode(), putvec(), getann(),
-    ungetann(), putann(), isigsettime(), isgsettime(), iannsettime(), strecg(),
-    setecgstr(), strann(), setannstr(), setanndesc(), wfdb_isann(),
-    wfdb_isqrs(), wfdb_setisqrs(), wfdb_map1(), wfdb_setmap1(), wfdb_map2(),
-    wfdb_setmap2(), wfdb_ammap(), wfdb_mamap(), wfdb_annpos(), wfdb_setannpos(),
-    adumuv(), newheader(), setheader(), setmsheader(), getseginfo(),
-    wfdbputprolog(), setsampfreq(), setbasetime(), putinfo(), setinfo(),
-    setibsize(), setobsize(), calopen(), getcal(), putcal(), newcal(),
-    wfdbgetskew(), sample_valid(), wfdb_me_fatal();
-extern FLONGINT wfdbgetstart();
-extern FSAMPLE muvadu(), physadu(), sample();
-extern FSTRING ecgstr(), annstr(), anndesc(), timstr(), mstimstr(), datstr(),
-    getwfdb(), getinfo(), wfdberror(), wfdbfile();
-extern FSITIME strtim(), tnextvec();
-extern FDATE strdat();
-extern FVOID setafreq(), setgvmode(), wfdb_freeinfo(), wfdbquit(), wfdbquiet(),
-    wfdbverbose(), setdb(), wfdbflush(), setcfreq(), setbasecount(), flushcal(),
-    wfdbsetiskew(), wfdbsetskew(), wfdbsetstart(), wfdbmemerr(), wfdb_error(),
-    setiafreq();
-extern FFREQUENCY getafreq(), getifreq(), sampfreq(), getcfreq(), getiafreq(),
-    getiaorigfreq();
-extern FDOUBLE aduphys(), getbasecount();
-#endif
-
-/* Remove local preprocessor definitions. */
-#ifdef wfdb_PROTO
-#undef wfdb_PROTO
-#endif
-
-#ifdef wfdb_CPP
-#undef wfdb_CPP
-#endif
-
-#ifdef wfdb_KRC
-#undef wfdb_KRC
-#undef signed
-#endif
-
-/* Include some useful function declarations.  This section includes standard
-   header files if available and provides alternative declarations for those
-   platforms that need them.
-
-  The ANSI/ISO C standard requires conforming compilers to predefine __STDC__.
-  Non-conforming compilers for MS-Windows may or may not predefine _WINDOWS;
-  if you use such a compiler, you may need to define _WINDOWS manually. */
-#if defined(__STDC__) || defined(_WINDOWS)
-#include <stdlib.h>
-#else
-extern char *getenv();
-extern void exit();
-typedef long time_t;
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#else
-extern char *malloc(), *calloc(), *realloc();
-#endif
-#ifdef ISPRINTF
-extern int sprintf();
-#else
-#ifndef MSDOS
-extern char *sprintf();
-#endif
-#endif
-#endif
-
-#ifndef BSD
-#include <string.h>
-#else /* for Berkeley UNIX only */
-#include <strings.h>
-#define strchr index
-#endif
 
 #endif
