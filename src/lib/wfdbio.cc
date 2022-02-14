@@ -396,37 +396,14 @@ OS- and compiler-dependent definitions:
    For MS-DOS/MS-Windows compilers.  Note that not all such compilers
    predefine the symbol MSDOS;  for those that do not, MSDOS is usually defined
    by a compiler command-line option in the "make" description file. */
-#ifdef MSDOS
-#define DSEP '\\'
-#define PSEP ';'
-#define AB "ab"
-#define RB "rb"
-#define WB "wb"
-#else
 
 /* For other ANSI C compilers.  Such compilers must predefine __STDC__ in order
    to conform to the ANSI specification. */
-#ifdef __STDC__
-#ifdef MAC /* Macintosh only.  Be sure to define MAC in 'wfdblib.h'. */
-#define DSEP ':'
-#define PSEP ';'
-#else /* Other ANSI C compilers (UNIX and variants). */
 #define DSEP '/'
 #define PSEP ':'
-#endif
 #define AB "ab"
 #define RB "rb"
 #define WB "wb"
-
-/* For all other C compilers, including traditional UNIX C compilers. */
-#else
-#define DSEP '/'
-#define PSEP ':'
-#define AB "a"
-#define RB "r"
-#define WB "w"
-#endif
-#endif
 
 /* wfdb_parse_path constructs a linked list of path components by splitting
 its string input (usually the value of WFDB). */
@@ -1069,12 +1046,7 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
     if (len > 0) {
       if (c0->type == WFDB_NET) {
         if (buf[len - 1] != '/') buf[len++] = '/';
-      }
-#ifndef MSDOS
-      else if (buf[len - 1] != DSEP)
-#else
-      else if (buf[len - 1] != DSEP && buf[len - 1] != ':')
-#endif
+      } else if (buf[len - 1] != DSEP)
         buf[len++] = DSEP;
     }
     buf[len] = 0;
@@ -1117,11 +1089,7 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
 int wfdb_checkname(const char *p, const char *s) {
   do {
     if (('0' <= *p && *p <= '9') || *p == '_' || *p == '~' || *p == '-' ||
-        *p == DSEP ||
-#ifdef MSDOS
-        *p == ':' || *p == '/' ||
-#endif
-        ('a' <= *p && *p <= 'z') || ('A' <= *p && *p <= 'Z'))
+        *p == DSEP || ('a' <= *p && *p <= 'z') || ('A' <= *p && *p <= 'Z'))
       p++;
     else {
       wfdb_error("init: illegal character %d in %s name\n", *p, s);
@@ -1143,10 +1111,6 @@ void wfdb_setirec(const char *p) {
 
   for (r = p; *r; r++)
     if (*r == DSEP) p = r + 1; /* strip off any path information */
-#ifdef MSDOS
-    else if (*r == ':')
-      p = r + 1;
-#endif
   len = strlen(p);
   if (len > WFDB_MAXRNL) len = WFDB_MAXRNL;
   if (strcmp(p, "-")) { /* don't record '-' (stdin) as record name */
@@ -2042,94 +2006,3 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
   SFREE(wp);
   return (NULL);
 }
-
-/* Miscellaneous OS-specific functions. */
-
-#ifdef NOSTRTOK
-char *strtok(char *p, char *sep) {
-  char *psep;
-  static char *s;
-
-  if (p) s = p;
-  if (!s || !(*s) || !sep || !(*sep)) return ((char *)NULL);
-  for (psep = sep; *psep; psep++)
-    if (*s == *psep) {
-      if (!(*(++s))) return ((char *)NULL);
-      psep = sep;
-    }
-  p = s;
-  while (*s)
-    for (psep = sep; *psep; psep++)
-      if (*s == *psep) {
-        *s++ == '\0';
-        return (p);
-      }
-  return (p);
-}
-#endif
-
-#ifdef _WINDLL
-#ifndef _WIN32
-/* Functions named LibMain and WEP are required in all 16-bit MS Windows
-dynamic link libraries. The private library function wgetenv is a replacement
-for the standard C getenv function, useful since the DOS environment is not
-available to Windows DLLs except by use of the Windows GetDOSEnvironment
-function.
-*/
-
-FINT LibMain(HINSTANCE hinst, WORD wDataSeg, WORD cbHeapSize,
-             LPSTR lpszCmdLine) {
-  if (cbHeapSize != 0) /* if DLL data segment is moveable */
-    UnlockData(0);
-  return (1);
-}
-
-FINT WEP(int nParameter) {
-  if (nParameter == WEP_SYSTEM_EXIT || WEP_FREE_DLL)
-    wfdbquit(); /* Always close WFDB files before shutdown or
-                   when the last WFDB application exits. */
-  return (1);
-}
-
-/* This is a quick-and-dirty reimplementation of getenv for the Windows 16-bit
-   DLL environment.  It searches the MSDOS environment for a line beginning
-   with the specified variable name, followed by '='.  This function can be
-   fooled by pathologic variable names (e.g., with embedded '=' characters),
-   but should be adequate for typical use. */
-
-char FAR *wgetenv(char far *var) {
-  char FAR *ep = GetDOSEnvironment();
-  int l = _fstrlen(var);
-
-  if (var == (char FAR *)NULL || *var = '\0') return ((char FAR *)NULL);
-  while (*ep) {
-    if (_fstrncmp(ep, var, l) == 0 && *(ep + l) == '=')
-      /* Got it!  Skip '=', return a pointer to the value string. */
-      return (ep + l + 1);
-    /* Go on to the next environment string. */
-    ep += _fstrlen(ep) + 1;
-  }
-
-  /* If here, the specified variable was not found in the environment. */
-  return ((char FAR *)NULL);
-}
-
-#else /* 32-bit MS Windows DLLs require DllMain instead of LibMain and WEP */
-
-int WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, PVOID pvReserved) {
-  switch (fdwReason) {
-      /* nothing to do when process (or thread) begins */
-    case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-      break;
-      /* when process terminates, always close WFDB files before shutdown or
-         when the last WFDB application exits */
-    case DLL_PROCESS_DETACH:
-      wfdbquit();
-      break;
-  }
-  return (TRUE);
-}
-#endif
-#endif
