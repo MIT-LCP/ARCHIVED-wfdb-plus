@@ -414,7 +414,7 @@ extern FVOID wfdbsetskew(WFDB_Signal s, int skew);
 extern FLONGINT wfdbgetstart(WFDB_Signal s);
 extern FVOID wfdbsetstart(WFDB_Signal s, long bytes);
 extern FINT wfdbputprolog(const char *prolog, long bytes, WFDB_Signal s);
-extern FVOID wfdbquit(void);
+
 extern FFREQUENCY sampfreq(char *record);
 extern FINT setsampfreq(WFDB_Frequency sampling_frequency);
 extern FFREQUENCY getcfreq(void);

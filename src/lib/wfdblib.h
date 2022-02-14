@@ -154,7 +154,6 @@ typedef struct WFDB_FILE WFDB_FILE;
 #include <sys/stat.h>
 #define MKDIR(D, P) mkdir((D), (P))
 
-
 /* These functions are defined in wfdbio.c */
 extern int wfdb_fclose(WFDB_FILE *fp);
 extern WFDB_FILE *wfdb_open(const char *file_type, const char *record,
@@ -167,8 +166,8 @@ extern void wfdb_p16(unsigned int x, WFDB_FILE *fp);
 extern void wfdb_p32(long x, WFDB_FILE *fp);
 extern int wfdb_parse_path(const char *wfdb_path);
 extern void wfdb_addtopath(const char *pathname);
-__attribute__((__format__(__printf__, 2, 3)))
-extern int wfdb_asprintf(char **buffer, const char *format, ...);
+__attribute__((__format__(__printf__, 2, 3))) extern int wfdb_asprintf(
+    char **buffer, const char *format, ...);
 extern WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
 extern int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
 extern void wfdb_setirec(const char *record_name);
@@ -185,14 +184,3 @@ extern size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb,
                           WFDB_FILE *fp);
 extern int wfdb_getc(WFDB_FILE *fp);
 extern int wfdb_putc(int c, WFDB_FILE *fp);
-
-/* These functions are defined in signal.c */
-extern void wfdb_sampquit(void);
-extern void wfdb_sigclose(void);
-extern void wfdb_osflush(void);
-extern void wfdb_freeinfo(void);
-extern int wfdb_oinfoclose(void);
-
-/* These functions are defined in annot.c */
-extern void wfdb_anclose(void);
-extern void wfdb_oaflush(void);
