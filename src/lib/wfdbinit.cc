@@ -1,5 +1,5 @@
 /* file: wfdbinit.c	G. Moody	 23 May 1983
-			Last revised:   28 April 2020   	wfdblib 10.7.0
+                        Last revised:   28 April 2020   	wfdblib 10.7.0
 WFDB library functions wfdbinit, wfdbquit, and wfdbflush
 _______________________________________________________________________________
 wfdb: a library for reading and writing annotated waveforms (time series data)
@@ -28,31 +28,32 @@ This file contains definitions of the following WFDB library functions:
  wfdbquit	(closes all annotation and signal files)
  wfdbflush	(writes all buffered output annotation and signal files)
 */
+#include "wfdbinit.h"
 
+#include "annot.h"
+#include "signal.h"
 #include "wfdblib.h"
 
-FINT wfdbinit(char *record, const WFDB_Anninfo *aiarray, unsigned int nann,
-	      WFDB_Siginfo *siarray, unsigned int nsig)
-{
-    int stat;
+int wfdbinit(char *record, const WFDB_Anninfo *aiarray, unsigned int nann,
+             WFDB_Siginfo *siarray, unsigned int nsig) {
+  int stat;
 
-    if ((stat = annopen(record, aiarray, nann)) == 0)
-	stat = isigopen(record, siarray, (int)nsig);
-    return (stat);
+  if ((stat = annopen(record, aiarray, nann)) == 0)
+    stat = isigopen(record, siarray, (int)nsig);
+  return (stat);
 }
 
-FVOID wfdbquit(void)
-{
-    wfdb_anclose();	/* close annotation files, reset variables */
-    wfdb_oinfoclose();	/* close info file */
-    wfdb_sigclose();	/* close signals, reset variables */
-    resetwfdb();	/* restore the WFDB path */
-    wfdb_sampquit();	/* release sample data buffer */
-    wfdb_freeinfo();	/* release info strings */
+void wfdbquit() {
+  wfdb_anclose();    /* close annotation files, reset variables */
+  wfdb_oinfoclose(); /* close info file */
+  wfdb_sigclose();   /* close signals, reset variables */
+  resetwfdb();       /* restore the WFDB path */
+  wfdb_sampquit();   /* release sample data buffer */
+  wfdb_freeinfo();   /* release info strings */
 }
 
-FVOID wfdbflush(void)	/* write all buffered output to files */
+void wfdbflush() /* write all buffered output to files */
 {
-    wfdb_oaflush();	/* flush buffered output annotations */
-    wfdb_osflush();	/* flush buffered output samples */
+  wfdb_oaflush(); /* flush buffered output annotations */
+  wfdb_osflush(); /* flush buffered output samples */
 }
