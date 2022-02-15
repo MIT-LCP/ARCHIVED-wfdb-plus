@@ -129,16 +129,6 @@ may be attached to the same signal provided that their num fields are unique.
 #define AUXLEN 6     /* length of AHA aux field */
 #define EOAF 0377    /* padding for end of AHA annotation files */
 
-/* Old definition of WFDB_ann structure, for compatibility */
-struct WFDB_ann_L {
-  /* WFDB_Time */ long time;
-  char anntyp;
-  signed char subtyp;
-  unsigned char chan;
-  signed char num;
-  unsigned char *aux;
-};
-
 /* Shared local data */
 static unsigned maxiann; /* max allowed number of input annotators */
 static unsigned niaf;    /* number of open input annotators */
@@ -147,9 +137,6 @@ static struct iadata {
   WFDB_Anninfo info;    /* input annotator information */
   WFDB_Annotation ann;  /* next annotation to be returned by getann */
   WFDB_Annotation pann; /* pushed-back annotation from ungetann */
-#ifdef WFDB_LARGETIME
-  struct WFDB_ann_L pann_L; /* pushed-back annotation (old format) */
-#endif
   WFDB_Frequency afreq;            /* time resolution, in ticks/second */
   unsigned word;                   /* next word from the input file */
   int ateof;                       /* EOF-reached indicator */
@@ -188,11 +175,7 @@ static WFDB_Frequency oafreq; /* time resolution in ticks/sec for newly-
 static int annclose_error;    /* if <0, error occurred while closing
                                  annotation files */
 
-#ifdef WFDB_LARGETIME
 typedef unsigned long long unsigned_time;
-#else
-typedef unsigned long unsigned_time;
-#endif
 
 /* Local functions (for the use of other functions in this module only). */
 
@@ -1149,101 +1132,3 @@ void wfdb_anclose() {
   for (an = niaf; an != 0; an--) iannclose(an - 1);
   for (an = noaf; an != 0; an--) oannclose(an - 1);
 }
-
-#ifdef WFDB_LARGETIME
-
-/* Wrapper functions
-
-   The following functions are provided for compatibility with
-   applications that do not support WFDB_LARGETIME. The behavior,
-   arguments, and return values of these functions are the same as the
-   "non-wrapped" functions above, except that 'long' is used in place
-   of WFDB_Time. */
-
-#undef getann
-FINT getann(WFDB_Annotator a, struct WFDB_ann_L *annot) {
-  WFDB_Annotation lla;
-  struct iadata *ia;
-  struct WFDB_ann_L la, *pushback = NULL;
-  int stat;
-
-  if (a < niaf && (ia = iad[a]) && ia->pann.anntyp != 0) pushback = &ia->pann_L;
-
-  stat = wfdb_getann_LL(a, &lla);
-  if (stat < 0) return (stat);
-
-  if (lla.time > LONG_MAX || lla.time < LONG_MIN)
-    lla.time = (lla.time < 0 ? LONG_MIN : LONG_MAX);
-
-  /* If an annotation was previously stored by ungetann, the result
-     should be identical to what the caller supplied (apart from any
-     changes made by setiafreq.)  Otherwise, any padding in the
-     structure should be zeroed (as getann does normally.) */
-
-  if (pushback)
-    la = *pushback;
-  else
-    memset(&la, 0, sizeof(struct WFDB_ann_L));
-  la.time = lla.time;
-  la.anntyp = lla.anntyp;
-  la.subtyp = lla.subtyp;
-  la.chan = lla.chan;
-  la.num = lla.num;
-  la.aux = lla.aux;
-  *annot = la;
-  return (stat);
-}
-
-#undef ungetann
-FINT ungetann(WFDB_Annotator a, const struct WFDB_ann_L *annot) {
-  WFDB_Annotation lla;
-  struct iadata *ia;
-  int stat;
-
-  memset(&lla, 0, sizeof(WFDB_Annotation));
-  lla.time = annot->time;
-  lla.anntyp = annot->anntyp;
-  lla.subtyp = annot->subtyp;
-  lla.chan = annot->chan;
-  lla.num = annot->num;
-  lla.aux = annot->aux;
-
-  if (a < niaf && (ia = iad[a])) {
-    if (ia->prev_time < LONG_MIN)
-      ia->prev_time = LONG_MIN;
-    else if (ia->prev_time > LONG_MAX)
-      ia->prev_time = LONG_MAX;
-  }
-
-  stat = wfdb_ungetann_LL(a, &lla);
-  if (stat == 0 && a < niaf && (ia = iad[a])) ia->pann_L = *annot;
-}
-
-#undef putann
-FINT putann(WFDB_Annotator a, const struct WFDB_ann_L *annot) {
-  WFDB_Annotation lla;
-  struct oadata *oa;
-
-  lla.time = annot->time;
-  lla.anntyp = annot->anntyp;
-  lla.subtyp = annot->subtyp;
-  lla.chan = annot->chan;
-  lla.num = annot->num;
-  lla.aux = annot->aux;
-
-  if (a < noaf && (oa = oad[a]) && oa->info.stat != WFDB_AHA_WRITE) {
-    if (lla.time == LONG_MIN)
-      lla.time = WFDB_TIME_MIN;
-    else if (lla.time == LONG_MAX)
-      lla.time = WFDB_TIME_MAX;
-  }
-
-  return (wfdb_putann_LL(a, &lla));
-}
-
-#undef iannsettime
-FINT iannsettime(long t) {
-  return (wfdb_iannsettime_LL(t == LONG_MIN ? WFDB_TIME_MIN : t));
-}
-
-#endif /* WFDB_LARGETIME */
