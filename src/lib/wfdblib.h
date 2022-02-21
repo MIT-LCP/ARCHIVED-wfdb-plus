@@ -101,17 +101,13 @@ symbols reserved to the library begin with the characters "wfdb_".
 /* Structures used by internal WFDB library functions only */
 struct WFDB_FILE {
   FILE *fp;
-  struct netfile *netfp;
+  netfile *netfp;
   int type;  // TODO: Replace with enum
 };
 
 /* Values for WFDB_FILE 'type' field */
 #define WFDB_LOCAL 0 /* a local file, read via C standard I/O */
 #define WFDB_NET 1   /* a remote file, read via libwww */
-
-/* Composite data types */
-typedef struct netfile netfile;
-typedef struct WFDB_FILE WFDB_FILE;
 
 /* These functions are defined in wfdbio.c */
 extern int wfdb_fclose(WFDB_FILE *fp);

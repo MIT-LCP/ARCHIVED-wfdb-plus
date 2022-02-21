@@ -718,11 +718,7 @@ int wfdb_vasprintf(char **buffer, const char *format, va_list arguments) {
     }
 
     VA_COPY(arguments2, arguments);
-#ifdef _WINDOWS
-    length = _vsnprintf(*buffer, bufsize, format, arguments2);
-#else
     length = vsnprintf(*buffer, bufsize, format, arguments2);
-#endif
     VA_END2(arguments2);
 
     /* some pre-standard versions of 'vsnprintf' return -1 if the
@@ -794,23 +790,15 @@ FVOID wfdb_error(const char *format, ...) {
   wfdb_vasprintf(&error_message, format, arguments);
   va_end(arguments);
 
-#if 1 /* standard variant: use stderr output */
   if (error_print) {
     (void)fprintf(stderr, "%s", wfdberror());
     (void)fflush(stderr);
   }
-#else /* MS Windows variant: use message box */
-  if (error_print)
-    MessageBox(GetFocus(), wfdberror(), "WFDB Library Error",
-               MB_ICONASTERISK | MB_OK);
-#endif
 }
 
 /* The wfdb_fprintf function handles all formatted output to files.  It is
 used in the same way as the standard fprintf function, except that its first
 argument is a pointer to a WFDB_FILE rather than a FILE. */
-
-
 
 int wfdb_fprintf(WFDB_FILE *wp, const char *format, ...) {
   int ret;
