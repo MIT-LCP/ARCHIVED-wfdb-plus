@@ -9,15 +9,18 @@ static long page_size = NF_PAGE_SIZE; /* bytes per range request (0: disable
 static int www_done_init = 0;         /* TRUE once libcurl is initialized */
 
 static CURL *curl_ua = NULL;
+static char curl_error_buf[CURL_ERROR_SIZE];
 
-static int nf_vfprintf(netfile *nf, const char *format, va_list ap) {
+static char **passwords;
+
+int nf_vfprintf(netfile *nf, const char *format, va_list ap) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return 0;
 }
 
 /* Construct the User-Agent string to be sent with HTTP requests. */
-static char *curl_get_ua_string(void) {
+char *curl_get_ua_string() {
   char *libcurl_ver;
   static char *s = NULL;
 
@@ -31,11 +34,9 @@ static char *curl_get_ua_string(void) {
   return (s);
 }
 
-static char curl_error_buf[CURL_ERROR_SIZE];
-
 /* This function will print out the curl error message if there was an
    error.  Zero means there was no error. */
-static int curl_try(CURLcode err) {
+int curl_try(CURLcode err) {
   if (err) {
     wfdb_error("curl error: %s\n", curl_error_buf);
   }
@@ -44,7 +45,7 @@ static int curl_try(CURLcode err) {
 
 /* Get the current time, as an unsigned number of seconds since some
    arbitrary starting point. */
-static unsigned int www_time(void) {
+unsigned int www_time() {
 #ifdef HAVE_CLOCK_GETTIME
   struct timespec ts;
   if (!clock_gettime(CLOCK_MONOTONIC, &ts)) return ((unsigned int)ts.tv_sec);
@@ -54,20 +55,9 @@ static unsigned int www_time(void) {
 
 /* This is a dummy write callback, for when we don't care about the
    data curl is receiving. */
-
-static size_t curl_null_write(void *ptr, size_t size, size_t nmemb,
-                              void *stream) {
+size_t curl_null_write(void *ptr, size_t size, size_t nmemb, void *stream) {
   return (size * nmemb);
 }
-
-typedef struct chunk CHUNK;
-#define chunk_size(x) ((x)->size)
-#define chunk_data(x) ((x)->data)
-#define chunk_new curl_chunk_new
-#define chunk_delete curl_chunk_delete
-#define chunk_putb curl_chunk_putb
-
-static char **passwords;
 
 /* www_parse_passwords parses the WFDBPASSWORD environment variable.
 This environment variable contains a list of URL prefixes and
@@ -83,7 +73,7 @@ to example.org.
 
 If there are multiple items in the list, they must be separated by
 end-of-line or tab characters. */
-static void www_parse_passwords(const char *str) {
+void www_parse_passwords(const char *str) {
   static char sep[] = "\t\n\r";
   char *xstr = NULL, *p, *q;
   int n;
@@ -110,7 +100,7 @@ static void www_parse_passwords(const char *str) {
 given URL.  It returns a string of the form "username:password" if one
 is defined, or returns NULL if no login information is required for
 that URL. */
-static const char *www_userpwd(const char *url) {
+const char *www_userpwd(const char *url) {
   int i, n;
   const char *p;
 
@@ -128,10 +118,34 @@ static const char *www_userpwd(const char *url) {
   return NULL;
 }
 
-static CHUNK *www_get_url_chunk(const char *url) {
-  CHUNK *chunk = NULL;
+/* Create a new, empty chunk. */
+Chunk *curl_chunk_new(long len) {
+  Chunk *c;
 
-  chunk = chunk_new(1024);
+  SUALLOC(c, 1, sizeof(Chunk));
+  SALLOC(c->data, 1, len);
+  c->size = 0L;
+  c->buffer_size = len;
+  c->start_pos = 0;
+  c->end_pos = 0;
+  c->total_size = 0;
+  c->url = NULL;
+  return c;
+}
+
+/* Delete a chunk */
+void curl_chunk_delete(Chunk *c) {
+  if (c) {
+    SFREE(c->data);
+    SFREE(c->url);
+    SFREE(c);
+  }
+}
+
+Chunk *www_get_url_chunk(const char *url) {
+  Chunk *chunk = NULL;
+
+  chunk = curl_chunk_new(1024);
   if (!chunk) return (NULL);
 
   if (/* Send a GET request */
@@ -153,18 +167,18 @@ static CHUNK *www_get_url_chunk(const char *url) {
       || curl_try(curl_easy_setopt(curl_ua, CURLOPT_WRITEDATA, chunk))
       /* perform the request */
       || www_perform_request(curl_ua)) {
-    chunk_delete(chunk);
+    curl_chunk_delete(chunk);
     return (NULL);
   }
   if (!chunk->data) {
-    chunk_delete(chunk);
+    curl_chunk_delete(chunk);
     chunk = NULL;
   }
 
   return (chunk);
 }
 
-static void nf_delete(netfile *nf) {
+void nf_delete(netfile *nf) {
   if (nf) {
     SFREE(nf->url);
     SFREE(nf->data);
@@ -173,9 +187,9 @@ static void nf_delete(netfile *nf) {
   }
 }
 
-static CHUNK *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
+Chunk *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
   char *url;
-  CHUNK *chunk;
+  Chunk *chunk;
   unsigned int request_time;
 
   /* If a previous request for this file was recently redirected,
@@ -215,9 +229,9 @@ static CHUNK *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
    to do this would be to invoke
       HTLoadToFile(url, request, filename);
 */
-static netfile *nf_new(const char *url) {
+netfile *nf_new(const char *url) {
   netfile *nf;
-  CHUNK *chunk = NULL;
+  Chunk *chunk = NULL;
 
   SUALLOC(nf, 1, sizeof(netfile));
   if (nf && url && *url) {
@@ -245,7 +259,7 @@ static netfile *nf_new(const char *url) {
         (chunk->size == page_size || chunk->size == chunk->total_size)) {
       /* Range request works and the total file size is known. */
       nf->cont_len = chunk->total_size;
-      nf->mode = NF_CHUNK_MODE;
+      nf->mode = NF_Chunk_MODE;
     } else if (chunk->total_size == 0) {
       if (page_size > 0 && chunk->size == page_size)
         /* This might be a range response from a protocol that
@@ -257,13 +271,13 @@ static netfile *nf_new(const char *url) {
         nf->cont_len = chunk->size;
 
       if (nf->cont_len > chunk->size)
-        nf->mode = NF_CHUNK_MODE;
+        nf->mode = NF_Chunk_MODE;
       else
         nf->mode = NF_FULL_MODE;
     } else {
       wfdb_error("nf_new: unexpected range response (%lu-%lu/%lu)\n",
                  chunk->start_pos, chunk->end_pos, chunk->total_size);
-      chunk_delete(chunk);
+      curl_chunk_delete(chunk);
       nf_delete(nf);
       return (NULL);
     }
@@ -285,13 +299,13 @@ static netfile *nf_new(const char *url) {
       nf_delete(nf);
       nf = NULL;
     }
-    if (chunk) chunk_delete(chunk);
+    if (chunk) curl_chunk_delete(chunk);
   }
   return (nf);
 }
 
-static long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
-  CHUNK *chunk = NULL;
+long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
+  Chunk *chunk = NULL;
   char *rp = NULL;
   long avail = nf->cont_len - startb;
 
@@ -300,7 +314,7 @@ static long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
       startb >= nf->cont_len || len <= 0L || rbuf == NULL)
     return (0L); /* invalid inputs -- fail silently */
 
-  if (nf->mode == NF_CHUNK_MODE) { /* range requests acceptable */
+  if (nf->mode == NF_Chunk_MODE) { /* range requests acceptable */
     long rlen = (avail >= page_size) ? page_size : avail;
 
     if (len <= page_size) { /* short request -- check if cached */
@@ -308,14 +322,14 @@ static long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
           ((startb + len) > (nf->base_addr + page_size))) {
         /* requested data not in cache -- update the cache */
         if (chunk = nf_get_url_range_chunk(nf, startb, rlen)) {
-          if (chunk_size(chunk) != rlen) {
+          if (chunk->size != rlen) {
             wfdb_error(
                 "nf_get_range: requested %ld bytes, received %ld bytes\n", rlen,
-                (long)chunk_size(chunk));
+                (long)chunk->size);
             len = 0L;
           } else {
             nf->base_addr = startb;
-            memcpy(nf->data, chunk_data(chunk), rlen);
+            memcpy(nf->data, chunk->data, rlen);
           }
         } else { /* attempt to update cache failed */
           wfdb_error(
@@ -331,12 +345,12 @@ static long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
 
     else if (chunk = nf_get_url_range_chunk(nf, startb, len)) {
       /* long request (> page_size) */
-      if (chunk_size(chunk) != len) {
+      if (chunk->size != len) {
         wfdb_error("nf_get_range: requested %ld bytes, received %ld bytes\n",
-                   len, (long)chunk_size(chunk));
+                   len, (long)chunk->size);
         len = 0L;
       }
-      rp = chunk_data(chunk);
+      rp = chunk->data;
     } else {
       wfdb_error(
           "nf_get_range: couldn't read %ld bytes of %s starting at %ld\n", len,
@@ -349,22 +363,18 @@ static long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
     rp = nf->data + startb;
 
   if (rp != NULL && len > 0) memcpy(rbuf, rp, len);
-  if (chunk) chunk_delete(chunk);
+  if (chunk) curl_chunk_delete(chunk);
   return (len);
 }
 
 /* nf_feof returns true after reading past the end of a file but before
    repositioning the pos in the file. */
-static int nf_feof(netfile *nf) {
-  return ((nf->err == NF_EOF_ERR) ? TRUE : FALSE);
-}
+int nf_feof(netfile *nf) { return ((nf->err == NF_EOF_ERR) ? 1 : 0); }
 
 /* nf_eof returns true if the file pointer is at the EOF. */
-static int nf_eof(netfile *nf) {
-  return (nf->pos >= nf->cont_len) ? TRUE : FALSE;
-}
+int nf_eof(netfile *nf) { return (nf->pos >= nf->cont_len) ? 1 : 0; }
 
-static netfile *nf_fopen(const char *url, const char *mode) {
+netfile *nf_fopen(const char *url, const char *mode) {
   netfile *nf = NULL;
 
   if (!www_done_init) www_init();
@@ -377,13 +387,13 @@ static netfile *nf_fopen(const char *url, const char *mode) {
   return (nf);
 }
 
-static int nf_fclose(netfile *nf) {
+int nf_fclose(netfile *nf) {
   nf_delete(nf);
   nf_open_files--;
   return (0);
 }
 
-static int nf_fgetc(netfile *nf) {
+int nf_fgetc(netfile *nf) {
   char c;
 
   if (nf_get_range(nf, nf->pos++, 1, &c)) return (c & 0xff);
@@ -401,7 +411,7 @@ static char *nf_fgets(char *s, int size, netfile *nf) {
   return (s);
 }
 
-static size_t nf_fread(void *ptr, size_t size, size_t nmemb, netfile *nf) {
+size_t nf_fread(void *ptr, size_t size, size_t nmemb, netfile *nf) {
   long bytes_available, bytes_read = 0L, bytes_requested = size * nmemb;
 
   if (nf == NULL || ptr == NULL || bytes_requested == 0) return ((size_t)0);
@@ -412,7 +422,7 @@ static size_t nf_fread(void *ptr, size_t size, size_t nmemb, netfile *nf) {
   return ((size_t)(bytes_read / size));
 }
 
-static int nf_fseek(netfile *nf, long offset, int whence) {
+int nf_fseek(netfile *nf, long offset, int whence) {
   int ret = -1;
 
   if (nf) switch (whence) {
@@ -443,34 +453,31 @@ static int nf_fseek(netfile *nf, long offset, int whence) {
   return (ret);
 }
 
-static long nf_ftell(netfile *nf) { return (nf->pos); }
+long nf_ftell(netfile *nf) { return (nf->pos); }
 
-static int nf_ferror(netfile *nf) {
-  return ((nf->err == NF_REAL_ERR) ? TRUE : FALSE);
-}
+int nf_ferror(netfile *nf) { return ((nf->err == NF_REAL_ERR) ? 1 : 0); }
 
-static void nf_clearerr(netfile *nf) { nf->err = NF_NO_ERR; }
+void nf_clearerr(netfile *nf) { nf->err = NF_NO_ERR; }
 
-static int nf_fflush(netfile *nf) {
+int nf_fflush(netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (EOF);
 }
 
-static size_t nf_fwrite(const void *ptr, size_t size, size_t nmemb,
-                        netfile *nf) {
+size_t nf_fwrite(const void *ptr, size_t size, size_t nmemb, netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (0);
 }
 
-static int nf_putc(int c, netfile *nf) {
+int nf_putc(int c, netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (EOF);
 }
 
-static void wfdb_wwwquit(void) {
+void wfdb_wwwquit() {
   int i;
   if (www_done_init) {
 #ifndef _WINDOWS
@@ -484,7 +491,7 @@ static void wfdb_wwwquit(void) {
   }
 }
 
-static void www_init(void) {
+void www_init() {
   if (!www_done_init) {
     char *p;
 
@@ -526,14 +533,14 @@ static void www_init(void) {
 
 /* Send a request and wait for the response.  If using HTTP, check the
    response code to see whether the request was successful. */
-static int www_perform_request(CURL *c) {
+int www_perform_request(CURL *c) {
   long code;
   if (curl_easy_perform(c)) return (-1);
   if (curl_easy_getinfo(c, CURLINFO_HTTP_CODE, &code)) return (0);
   return (code < 400 ? 0 : -1);
 }
 
-static long www_get_cont_len(const char *url) {
+long www_get_cont_len(const char *url) {
   double length;
 
   length = 0;
@@ -561,38 +568,14 @@ static long www_get_cont_len(const char *url) {
   return ((long)length);
 }
 
-/* Create a new, empty chunk. */
-static CHUNK *curl_chunk_new(long len) {
-  struct chunk *c;
-
-  SUALLOC(c, 1, sizeof(struct chunk));
-  SALLOC(c->data, 1, len);
-  c->size = 0L;
-  c->buffer_size = len;
-  c->start_pos = 0;
-  c->end_pos = 0;
-  c->total_size = 0;
-  c->url = NULL;
-  return c;
-}
-
-/* Delete a chunk */
-static void curl_chunk_delete(struct chunk *c) {
-  if (c) {
-    SFREE(c->data);
-    SFREE(c->url);
-    SFREE(c);
-  }
-}
-
 /* Write metadata (e.g., HTTP headers) into a chunk.  This function is
    called by curl and must take the same arguments as fwrite().  ptr
    points to the data received, size*nmemb is the number of bytes, and
    stream is the user data specified by CURLOPT_WRITEHEADER. */
-static size_t curl_chunk_header_write(void *ptr, size_t size, size_t nmemb,
-                                      void *stream) {
+size_t curl_chunk_header_write(void *ptr, size_t size, size_t nmemb,
+                               void *stream) {
   char *s = (char *)ptr;
-  struct chunk *c = (struct chunk *)stream;
+  Chunk *c = (Chunk *)stream;
 
   if (0 == strncasecmp(s, "Content-Range:", 14)) {
     s += 14;
@@ -607,11 +590,10 @@ static size_t curl_chunk_header_write(void *ptr, size_t size, size_t nmemb,
    take the same arguments as fwrite().  ptr points to the data
    received, size*nmemb is the number of bytes, and stream is the user
    data specified by CURLOPT_WRITEDATA. */
-static size_t curl_chunk_write(void *ptr, size_t size, size_t nmemb,
-                               void *stream) {
+size_t curl_chunk_write(void *ptr, size_t size, size_t nmemb, void *stream) {
   size_t count = 0;
   char *p;
-  struct chunk *c = (struct chunk *)stream;
+  Chunk *c = (Chunk *)stream;
 
   while (nmemb > 0) {
     while ((c->size + size) > c->buffer_size) {
@@ -629,18 +611,18 @@ static size_t curl_chunk_write(void *ptr, size_t size, size_t nmemb,
 }
 
 /* This function emulates the libwww function HTChunk_putb. */
-static void curl_chunk_putb(struct chunk *chunk, char *data, size_t len) {
+void curl_chunk_putb(Chunk *chunk, char *data, size_t len) {
   curl_chunk_write(data, 1, len, chunk);
 }
 
-static CHUNK *www_get_url_range_chunk(const char *url, long startb, long len) {
-  CHUNK *chunk = NULL, *extra_chunk = NULL;
+Chunk *www_get_url_range_chunk(const char *url, long startb, long len) {
+  Chunk *chunk = NULL, *extra_chunk = NULL;
   char range_req_str[6 * sizeof(long) + 2];
   const char *url2 = NULL;
 
   if (url && *url) {
     sprintf(range_req_str, "%ld-%ld", startb, startb + len - 1);
-    chunk = chunk_new(len);
+    chunk = curl_chunk_new(len);
     if (!chunk) return (NULL);
 
     if (/* In this case we want to send a GET request rather than
@@ -666,11 +648,11 @@ static CHUNK *www_get_url_range_chunk(const char *url, long startb, long len) {
         || curl_try(curl_easy_setopt(curl_ua, CURLOPT_WRITEHEADER, chunk))
         /* Perform the request */
         || www_perform_request(curl_ua)) {
-      chunk_delete(chunk);
+      curl_chunk_delete(chunk);
       return (NULL);
     }
     if (!chunk->data) {
-      chunk_delete(chunk);
+      curl_chunk_delete(chunk);
       chunk = NULL;
     } else if (!curl_easy_getinfo(curl_ua, CURLINFO_EFFECTIVE_URL, &url2) &&
                url2 && *url2 && strcmp(url, url2)) {
