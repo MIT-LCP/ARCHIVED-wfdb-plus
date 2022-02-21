@@ -24,18 +24,14 @@ please visit PhysioNet (http://www.physionet.org/).
 _______________________________________________________________________________
 
 */
-
 #ifndef wfdb_WFDB_H /* avoid multiple definitions */
 #define wfdb_WFDB_H
 
 /* WFDB library version. */
-#define WFDB_MAJOR WFDBMAJOR
-#define WFDB_MINOR WFDBMINOR
-#define WFDB_RELEASE WFDBRELEASE
-#define WFDB_NETFILES                                    \
-  1 /* if 1, library includes code for HTTP, FTP clients \
-     */
-#define WFDB_NETFILES_LIBCURL 1
+constexpr char* WFDB_MAJOR = "20";
+constexpr char* WFDB_MINOR = "0";
+constexpr char* WFDB_RELEASE = "0";
+constexpr int WFDB_NETFILES = 1; /* if 1, library includes code for HTTP, FTP clients */
 
 /* Simple data types */
 typedef int WFDB_Sample;             /* units are adus */
@@ -422,25 +418,13 @@ extern FVOID setcfreq(WFDB_Frequency counter_frequency);
 extern FDOUBLE getbasecount(void);
 extern FVOID setbasecount(double count);
 extern FINT setbasetime(char *time_string);
-extern FVOID wfdbquiet(void);
-extern FVOID wfdbverbose(void);
 extern FSTRING wfdberror(void);
-extern FVOID setwfdb(const char *database_path_string);
-extern FSTRING getwfdb(void);
-extern FVOID resetwfdb(void);
+
 extern FINT setibsize(int input_buffer_size);
 extern FINT setobsize(int output_buffer_size);
-extern FSTRING wfdbfile(const char *file_type, char *record);
 extern FVOID wfdbflush(void);
-extern FVOID wfdbmemerr(int exit_on_error);
 __attribute__((__format__(__printf__, 1, 2)))
 extern FVOID
 wfdb_error(const char *format_string, ...);
-extern FINT wfdb_me_fatal(void);
-extern FCONSTSTRING wfdbversion(void);
-extern FCONSTSTRING wfdbldflags(void);
-extern FCONSTSTRING wfdbcflags(void);
-extern FCONSTSTRING wfdbdefwfdb(void);
-extern FCONSTSTRING wfdbdefwfdbcal(void);
 
 #endif

@@ -181,9 +181,9 @@ static const char *wfdb_getiwfdb(char **p);
 to restore the WFDB path to the value that was returned by the first call
 to getwfdb (or NULL if getwfdb was not called). */
 
-FVOID resetwfdb(void) { SSTRCPY(wfdbpath, wfdbpath_init); }
+void resetwfdb() { SSTRCPY(wfdbpath, wfdbpath_init); }
 
-FSTRING getwfdb(void) {
+char* getwfdb() {
   if (wfdbpath == NULL) {
     const char *p = getenv("WFDB");
 
@@ -198,8 +198,8 @@ FSTRING getwfdb(void) {
 
 /* setwfdb can be called within an application to change the WFDB path. */
 
-FVOID setwfdb(const char *p) {
-  void wfdb_export_config(void);
+void setwfdb(const char *p) {
+  wfdb_export_config();
 
   if (p == NULL && (p = getenv("WFDB")) == NULL) p = DEFWFDB;
   SSTRCPY(wfdbpath, p);
@@ -214,17 +214,17 @@ FVOID setwfdb(const char *p) {
 
 static int error_print = 1;
 
-FVOID wfdbquiet(void) { error_print = 0; }
+void wfdbquiet() { error_print = 0; }
 
 /* wfdbverbose enables error messages from the WFDB library. */
 
-FVOID wfdbverbose(void) { error_print = 1; }
+void wfdbverbose() { error_print = 1; }
 
 static char *wfdb_filename;
 
 /* wfdbfile returns the pathname or URL of a WFDB file. */
 
-FSTRING wfdbfile(const char *s, char *record) {
+char* wfdbfile(const char *s, char *record) {
   WFDB_FILE *ifile;
 
   if (s == NULL && record == NULL) return (wfdb_filename);
@@ -245,7 +245,7 @@ to the caller;  by default, such errors cause the running process to exit. */
 
 static int wfdb_mem_behavior = 1;
 
-FVOID wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
+void wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
 
 /* Functions that expose configuration constants used by the WFDB Toolkit for
    Matlab. */
@@ -262,19 +262,19 @@ FVOID wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
 #define CFLAGS "CFLAGS not defined"
 #endif
 
-FCONSTSTRING wfdbversion(void) { return VERSION; }
+const char* wfdbversion() { return VERSION; }
 
-FCONSTSTRING wfdbldflags(void) { return LDFLAGS; }
+const char* wfdbldflags(void) { return LDFLAGS; }
 
-FCONSTSTRING wfdbcflags(void) { return CFLAGS; }
+const char* wfdbcflags(void) { return CFLAGS; }
 
-FCONSTSTRING wfdbdefwfdb(void) { return DEFWFDB; }
+const char* wfdbdefwfdb(void) { return DEFWFDB; }
 
-FCONSTSTRING wfdbdefwfdbcal(void) { return DEFWFDBCAL; }
+const char* wfdbdefwfdbcal(void) { return DEFWFDBCAL; }
 
 /* Private functions (for the use of other WFDB library functions only). */
 
-FINT wfdb_me_fatal() /* used by the MEMERR macro defined in wfdblib.h */
+int wfdb_me_fatal() /* used by the MEMERR macro defined in wfdblib.h */
 {
   return (wfdb_mem_behavior);
 }
@@ -323,17 +323,17 @@ void wfdb_p32(long x, WFDB_FILE *fp) {
   wfdb_p16((unsigned int)x, fp);
 }
 
-struct wfdb_path_component {
+struct WfdbPathComponent {
   char *prefix;
-  struct wfdb_path_component *next, *prev;
+  WfdbPathComponent *next, *prev;
   int type; /* WFDB_LOCAL or WFDB_NET */
 };
-static struct wfdb_path_component *wfdb_path_list;
+static WfdbPathComponent *wfdb_path_list;
 
 /* wfdb_free_path_list clears out the path list, freeing all memory allocated
    to it. */
-void wfdb_free_path_list(void) {
-  struct wfdb_path_component *c0 = NULL, *c1 = wfdb_path_list;
+void wfdb_free_path_list() {
+  WfdbPathComponent *c0 = NULL, *c1 = wfdb_path_list;
 
   while (c1) {
     c0 = c1->next;
@@ -411,8 +411,8 @@ its string input (usually the value of WFDB). */
 int wfdb_parse_path(const char *p) {
   const char *q;
   int current_type, slashes, found_end;
-  struct wfdb_path_component *c0 = NULL, *c1 = wfdb_path_list;
-  static first_call = 1;
+  WfdbPathComponent *c0 = NULL, *c1 = wfdb_path_list;
+  static int first_call = 1;
 
   /* First, free the existing wfdb_path_list, if any. */
   wfdb_free_path_list();
@@ -442,13 +442,11 @@ int wfdb_parse_path(const char *p) {
                      a drive suffix (MS-DOS), or a directory separator
                      (Mac) */
           if (*(q + 1) == '/' && *(q + 2) == '/') current_type = WFDB_NET;
-#if PSEP == ':'
           /* Allow colons within the authority portion of the URL.
              For example, "http://[::1]:8080/database:/usr/database"
              is a database path with two components. */
           else if (current_type != WFDB_NET || slashes > 2)
             found_end = 1;
-#endif
           break;
         case ';': /* definitely a component delimiter */
         case ' ':
@@ -465,7 +463,7 @@ int wfdb_parse_path(const char *p) {
     } while (!found_end);
 
     /* current component begins at p, ends at q-1 */
-    SUALLOC(c1, 1, sizeof(struct wfdb_path_component));
+    SUALLOC(c1, 1, sizeof(WfdbPathComponent));
     SALLOC(c1->prefix, q - p + 1, sizeof(char));
     memcpy(c1->prefix, p, q - p);
     c1->type = current_type;
@@ -524,12 +522,6 @@ static const char *wfdb_getiwfdb(char **p) {
   return (*p);
 }
 
-/* wfdb_export_config is invoked from setwfdb to place the configuration
-   variables into the environment if possible. */
-
-#ifndef HAS_PUTENV
-#define wfdb_export_config()
-#else
 static char *p_wfdb, *p_wfdbcal, *p_wfdbannsort, *p_wfdbgvmode;
 
 /* wfdb_free_config frees all memory allocated by wfdb_export_config.
@@ -537,7 +529,7 @@ static char *p_wfdb, *p_wfdbcal, *p_wfdbannsort, *p_wfdbgvmode;
    It must not be invoked at any other time, since pointers passed to
    putenv must be maintained by the caller, according to POSIX.1-2001
    semantics for putenv.  */
-void wfdb_free_config(void) {
+void wfdb_free_config() {
   static char n_wfdb[] = "WFDB=";
   static char n_wfdbcal[] = "WFDBCAL=";
   static char n_wfdbannsort[] = "WFDBANNSORT=";
@@ -555,7 +547,9 @@ void wfdb_free_config(void) {
   SFREE(wfdb_filename);
 }
 
-void wfdb_export_config(void) {
+/* wfdb_export_config is invoked from setwfdb to place the configuration
+   variables into the environment if possible. */
+void wfdb_export_config() {
   static int first_call = 1;
   char *envstr = NULL;
 
@@ -593,7 +587,6 @@ void wfdb_export_config(void) {
     }
   }
 }
-#endif
 
 /* wfdb_addtopath adds the path component of its string argument (i.e.
 everything except the file name itself) to the WFDB path, inserting it
@@ -618,7 +611,7 @@ the WFDB path.
 void wfdb_addtopath(const char *s) {
   const char *p;
   int i, len;
-  struct wfdb_path_component *c0, *c1;
+  WfdbPathComponent *c0, *c1;
 
   if (s == NULL || *s == '\0') return;
 
@@ -652,7 +645,7 @@ void wfdb_addtopath(const char *s) {
   }
   if (!c1) {
     /* path component of s not in WFDB path -- make a new node for it */
-    SUALLOC(c1, 1, sizeof(struct wfdb_path_component));
+    SUALLOC(c1, 1, sizeof(WfdbPathComponent));
     SALLOC(c1->prefix, p - s + 1, sizeof(char));
     memcpy(c1->prefix, s, p - s);
     if (strstr(c1->prefix, "://"))
@@ -890,7 +883,7 @@ is no longer supported. */
 WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
   char *wfdb, *p, *q, *r, *buf = NULL;
   int rlen;
-  struct wfdb_path_component *c0;
+  WfdbPathComponent *c0;
   int bufsize, len, ireclen;
   WFDB_FILE *ifile;
 
@@ -1101,7 +1094,7 @@ void wfdb_setirec(const char *p) {
   }
 }
 
-char *wfdb_getirec(void) { return (*irec ? irec : NULL); }
+char *wfdb_getirec() { return (*irec ? irec : NULL); }
 
 /* Remove trailing '.hea' from a record name, if present. */
 void wfdb_striphea(char *p) {
