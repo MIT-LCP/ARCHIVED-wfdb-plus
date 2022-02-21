@@ -1235,11 +1235,8 @@ int wfdb_putc(int c, WFDB_FILE *wp) {
 int wfdb_fclose(WFDB_FILE *wp) {
   int status;
 
-#if WFDB_NETFILES
   status = (wp->type == WFDB_NET) ? nf_fclose(wp->netfp) : fclose(wp->fp);
-#else
-  status = fclose(wp->fp);
-#endif
+
   if (wp->fp != stdin) SFREE(wp);
   return (status);
 }
