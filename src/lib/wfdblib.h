@@ -30,6 +30,12 @@ to be invoked directly by user programs.  By convention, all externally defined
 symbols reserved to the library begin with the characters "wfdb_".
 */
 
+#include <sys/stat.h>
+#ifndef FILE
+#include <stdio.h>
+#endif
+
+#include "netfiles.hh"
 #include "wfdb.h"
 
 /* DEFWFDB is the default value of the WFDB path if the WFDB environment
@@ -85,10 +91,6 @@ symbols reserved to the library begin with the characters "wfdb_".
 // TODO(cx1111): Remove the need for this variable
 #define HAS_PUTENV
 
-#ifndef FILE
-#include <stdio.h>
-#endif
-
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -100,7 +102,7 @@ symbols reserved to the library begin with the characters "wfdb_".
 struct WFDB_FILE {
   FILE *fp;
   struct netfile *netfp;
-  int type;
+  int type;  // TODO: Replace with enum
 };
 
 /* Values for WFDB_FILE 'type' field */
@@ -110,49 +112,6 @@ struct WFDB_FILE {
 /* Composite data types */
 typedef struct netfile netfile;
 typedef struct WFDB_FILE WFDB_FILE;
-
-/* To enable http and ftp access as well as standard (local file) I/O via the
-   WFDB library, define WFDB_NETFILES=1 and link with libwww (see 'Makefile').
-   Otherwise, the WFDB library uses only the ANSI/ISO standard I/O library. */
-#if WFDB_NETFILES
-#if WFDB_NETFILES_LIBCURL
-#include <curl/curl.h>
-#else
-#include <WWWInit.h>
-#include <WWWLib.h>
-#endif
-#include <errno.h>
-#ifndef EROFS /* errno value: attempt to write to a read-only file system */
-#ifdef EINVAL
-#define EROFS EINVAL
-#else
-#define EROFS 1
-#endif
-#endif
-
-/* Constants */
-/* #define USEHTCACHE */ /* uncomment to enable caching by libwww */
-
-/* http cache parameters (effective only if USEHTCACHE is defined) */
-#define CACHEDIR "/tmp" /* should be world-writable */
-#define CACHESIZE 100   /* max size of the entire http cache in MB */
-#define ENTRYSIZE 20    /* max size of a single cache entry in MB */
-
-#define NF_PAGE_SIZE 32768 /* default bytes per http range request */
-
-/* values for netfile 'err' field */
-#define NF_NO_ERR 0   /* no errors */
-#define NF_EOF_ERR 1  /* file pointer at EOF */
-#define NF_REAL_ERR 2 /* read request failed */
-
-/* values for netfile 'mode' field */
-#define NF_CHUNK_MODE 0 /* http range requests supported */
-#define NF_FULL_MODE 1  /* http range requests not supported */
-
-#endif
-
-#include <sys/stat.h>
-#define MKDIR(D, P) mkdir((D), (P))
 
 /* These functions are defined in wfdbio.c */
 extern int wfdb_fclose(WFDB_FILE *fp);
