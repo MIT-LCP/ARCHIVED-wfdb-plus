@@ -36,7 +36,7 @@ symbols reserved to the library begin with the characters "wfdb_".
 #endif
 
 #include "netfiles.hh"
-#include "wfdb.h"
+#include "wfdb.hh"
 
 /* DEFWFDB is the default value of the WFDB path if the WFDB environment
    variable is not set.  This value is edited by the configuration script
@@ -88,16 +88,6 @@ symbols reserved to the library begin with the characters "wfdb_".
    is not set, the value of DEFWFDBMODE determines the mode. */
 #define DEFWFDBGVMODE WFDB_LOWRES
 
-// TODO(cx1111): Remove the need for this variable
-#define HAS_PUTENV
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 /* Structures used by internal WFDB library functions only */
 struct WFDB_FILE {
   FILE *fp;
@@ -109,33 +99,54 @@ struct WFDB_FILE {
 #define WFDB_LOCAL 0 /* a local file, read via C standard I/O */
 #define WFDB_NET 1   /* a remote file, read via libwww */
 
-/* These functions are defined in wfdbio.c */
-extern int wfdb_fclose(WFDB_FILE *fp);
-extern WFDB_FILE *wfdb_open(const char *file_type, const char *record,
+/* These functions are defined in wfdbio.cc */
+void resetwfdb();
+char* getwfdb();
+void setwfdb(const char *database_path_string);
+void wfdbquiet();
+void wfdbverbose();
+char* wfdbfile(const char *file_type, char *record);
+void wfdbmemerr(int behavior);
+const char* wfdbversion();
+const char* wfdbldflags();
+const char* wfdbcflags();
+const char* wfdbdefwfdb();
+const char* wfdbdefwfdbcal();
+
+int wfdb_me_fatal();
+
+int wfdb_fclose(WFDB_FILE *fp);
+WFDB_FILE *wfdb_open(const char *file_type, const char *record,
                             int mode);
-extern int wfdb_checkname(const char *name, const char *description);
-extern void wfdb_striphea(char *record);
-extern int wfdb_g16(WFDB_FILE *fp);
-extern long wfdb_g32(WFDB_FILE *fp);
-extern void wfdb_p16(unsigned int x, WFDB_FILE *fp);
-extern void wfdb_p32(long x, WFDB_FILE *fp);
-extern int wfdb_parse_path(const char *wfdb_path);
-extern void wfdb_addtopath(const char *pathname);
+int wfdb_checkname(const char *name, const char *description);
+void wfdb_striphea(char *record);
+
+int wfdb_g16(WFDB_FILE *fp);
+long wfdb_g32(WFDB_FILE *fp);
+void wfdb_p16(unsigned int x, WFDB_FILE *fp);
+void wfdb_p32(long x, WFDB_FILE *fp);
+
+void wfdb_free_path_list();
+int wfdb_parse_path(const char *wfdb_path);
+void wfdb_addtopath(const char *pathname);
 __attribute__((__format__(__printf__, 2, 3))) extern int wfdb_asprintf(
     char **buffer, const char *format, ...);
-extern WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
-extern int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
-extern void wfdb_setirec(const char *record_name);
-extern char *wfdb_getirec(void);
-extern void wfdb_clearerr(WFDB_FILE *fp);
-extern int wfdb_feof(WFDB_FILE *fp);
-extern int wfdb_ferror(WFDB_FILE *fp);
-extern int wfdb_fflush(WFDB_FILE *fp);
-extern char *wfdb_fgets(char *s, int size, WFDB_FILE *fp);
-extern size_t wfdb_fread(void *ptr, size_t size, size_t nmemb, WFDB_FILE *fp);
-extern int wfdb_fseek(WFDB_FILE *fp, long offset, int whence);
-extern long wfdb_ftell(WFDB_FILE *fp);
-extern size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb,
+
+WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
+int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
+
+void wfdb_setirec(const char *record_name);
+char *wfdb_getirec();
+
+void wfdb_clearerr(WFDB_FILE *fp);
+int wfdb_feof(WFDB_FILE *fp);
+int wfdb_ferror(WFDB_FILE *fp);
+int wfdb_fflush(WFDB_FILE *fp);
+char *wfdb_fgets(char *s, int size, WFDB_FILE *fp);
+size_t wfdb_fread(void *ptr, size_t size, size_t nmemb, WFDB_FILE *fp);
+int wfdb_fseek(WFDB_FILE *fp, long offset, int whence);
+long wfdb_ftell(WFDB_FILE *fp);
+size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb,
                           WFDB_FILE *fp);
-extern int wfdb_getc(WFDB_FILE *fp);
-extern int wfdb_putc(int c, WFDB_FILE *fp);
+int wfdb_getc(WFDB_FILE *fp);
+int wfdb_putc(int c, WFDB_FILE *fp);
