@@ -1,17 +1,14 @@
 #include "netfiles.hh"
+
 #include <errno.h>
-
-
 
 // State tracking
 static int nf_open_files = 0;         /* number of open netfiles */
 static long page_size = NF_PAGE_SIZE; /* bytes per range request (0: disable
                                          range requests) */
-static int www_done_init = 0;     /* TRUE once libcurl is initialized */
+static int www_done_init = 0;         /* TRUE once libcurl is initialized */
 
 static CURL *curl_ua = NULL;
-
-
 
 static int nf_vfprintf(netfile *nf, const char *format, va_list ap) {
   /* no support yet for writing to remote files */
@@ -36,7 +33,6 @@ static char *curl_get_ua_string(void) {
 
 static char curl_error_buf[CURL_ERROR_SIZE];
 
-
 /* This function will print out the curl error message if there was an
    error.  Zero means there was no error. */
 static int curl_try(CURLcode err) {
@@ -56,9 +52,6 @@ static unsigned int www_time(void) {
   return ((unsigned int)time(NULL));
 }
 
-
-
-
 /* This is a dummy write callback, for when we don't care about the
    data curl is receiving. */
 
@@ -75,7 +68,6 @@ typedef struct chunk CHUNK;
 #define chunk_putb curl_chunk_putb
 
 static char **passwords;
-
 
 /* www_parse_passwords parses the WFDBPASSWORD environment variable.
 This environment variable contains a list of URL prefixes and
@@ -135,7 +127,6 @@ static const char *www_userpwd(const char *url) {
 
   return NULL;
 }
-
 
 static CHUNK *www_get_url_chunk(const char *url) {
   CHUNK *chunk = NULL;
@@ -478,10 +469,6 @@ static int nf_putc(int c, netfile *nf) {
   errno = EROFS;
   return (EOF);
 }
-
-
-
-
 
 static void wfdb_wwwquit(void) {
   int i;
