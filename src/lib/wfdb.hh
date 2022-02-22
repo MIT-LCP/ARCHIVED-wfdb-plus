@@ -1,27 +1,6 @@
 /* file: wfdb.h		G. Moody	13 June 1983
-                        Last revised:    4 May 2020     	wfdblib 10.7.0
+
 WFDB library type, constant, structure, and function interface definitions
-_______________________________________________________________________________
-wfdb: a library for reading and writing annotated waveforms (time series data)
-Copyright (C) 1983-2013 George B. Moody
-
-This library is free software; you can redistribute it and/or modify it under
-the terms of the GNU Library General Public License as published by the Free
-Software Foundation; either version 2 of the License, or (at your option) any
-later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU Library General Public License for more
-details.
-
-You should have received a copy of the GNU Library General Public License along
-with this library; if not, see <http://www.gnu.org/licenses/>.
-
-You may contact the author by e-mail (wfdb@physionet.org) or postal mail
-(MIT Room E25-505A, Cambridge, MA 02139 USA).  For updates to this software,
-please visit PhysioNet (http://www.physionet.org/).
-_______________________________________________________________________________
 
 */
 #ifndef wfdb_WFDB_H /* avoid multiple definitions */

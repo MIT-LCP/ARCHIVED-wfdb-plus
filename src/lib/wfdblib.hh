@@ -1,28 +1,6 @@
 /* file: wfdblib.h	G. Moody	13 April 1989
-                        Last revised:    20 May 2020          wfdblib 10.7.0
+
 External definitions for WFDB library private functions
-
-_______________________________________________________________________________
-wfdb: a library for reading and writing annotated waveforms (time series data)
-Copyright (C) 1989-2012 George B. Moody
-
-This library is free software; you can redistribute it and/or modify it under
-the terms of the GNU Library General Public License as published by the Free
-Software Foundation; either version 2 of the License, or (at your option) any
-later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU Library General Public License for more
-details.
-
-You should have received a copy of the GNU Library General Public License along
-with this library; if not, see <http://www.gnu.org/licenses/>.
-
-You may contact the author by e-mail (wfdb@physionet.org) or postal mail
-(MIT Room E25-505A, Cambridge, MA 02139 USA).  For updates to this software,
-please visit PhysioNet (http://www.physionet.org/).
-_______________________________________________________________________________
 
 These definitions may be included in WFDB library source files to permit them
 to share information about library private functions, which are not intended
@@ -99,54 +77,121 @@ struct WFDB_FILE {
 #define WFDB_LOCAL 0 /* a local file, read via C standard I/O */
 #define WFDB_NET 1   /* a remote file, read via libwww */
 
-/* These functions are defined in wfdbio.cc */
-void resetwfdb();
-char* getwfdb();
-void setwfdb(const char *database_path_string);
-void wfdbquiet();
-void wfdbverbose();
-char* wfdbfile(const char *file_type, char *record);
-void wfdbmemerr(int behavior);
-const char* wfdbversion();
-const char* wfdbldflags();
-const char* wfdbcflags();
-const char* wfdbdefwfdb();
-const char* wfdbdefwfdbcal();
 
+// Returns the database path string
+char* getwfdb();
+// sets the database path string
+void setwfdb(const char *database_path_string);
+// restores the database path to its initial value
+void resetwfdb();
+// Suppresses WFDB library error messages
+void wfdbquiet();
+// Enables WFDB library error messages
+void wfdbverbose();
+
+// Returns the complete pathname of a WFDB file
+char* wfdbfile(const char *file_type, char *record);
+// Set behavior on memory errors
+void wfdbmemerr(int behavior);
+// Indicates if memory errors are fatal
 int wfdb_me_fatal();
 
-int wfdb_fclose(WFDB_FILE *fp);
-WFDB_FILE *wfdb_open(const char *file_type, const char *record,
-                            int mode);
-int wfdb_checkname(const char *name, const char *description);
-void wfdb_striphea(char *record);
+// These functions expose config strings needed by the WFDB Toolkit for Matlab:
+// Return the string defined by VERSION
+const char* wfdbversion();
+// Return the string defined by LDFLAGS
+const char* wfdbldflags();
+// Return the string defined by CFLAGS
+const char* wfdbcflags();
+// Return the string defined by DEFWFDB
+const char* wfdbdefwfdb();
+// return the string defined by DEFWFDBCAL
+const char* wfdbdefwfdbcal();
 
+// Reads a 16-bit integer
 int wfdb_g16(WFDB_FILE *fp);
+// Reads a 32-bit integer
 long wfdb_g32(WFDB_FILE *fp);
+// Writes a 16-bit integer
 void wfdb_p16(unsigned int x, WFDB_FILE *fp);
+// Writes a 32-bit integer
 void wfdb_p32(long x, WFDB_FILE *fp);
 
+// Puts the WFDB path, etc. into the environment
+void wfdb_export_config();
+
+
+// Finds and opens database files
+WFDB_FILE *wfdb_open(const char *file_type, const char *record,
+                            int mode);
+// Checks record and annotator names for validity
+int wfdb_checkname(const char *name, const char *description);
+// Removes trailing '.hea' from a record name, if present
+void wfdb_striphea(char *record);
+
+// Frees data structures assigned to the path list
 void wfdb_free_path_list();
+// Splits WFDB path into components
 int wfdb_parse_path(const char *wfdb_path);
+
+// Sets WFDB from the contents of a file
+static const char *wfdb_getiwfdb(char **p);
+
+// Adds path component of string argument to WFDB path
 void wfdb_addtopath(const char *pathname);
-__attribute__((__format__(__printf__, 2, 3))) extern int wfdb_asprintf(
-    char **buffer, const char *format, ...);
+__attribute__((__format__(__printf__, 2, 3)))
 
-WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
+// Allocates and formats a message
+int wfdb_asprintf(char **buffer, const char *format, ...);
+// Allocates and formats a message
+int wfdb_vasprintf(char **buffer, const char *format, ...);
+
+// Like fprintf, but first arg is a WFDB_FILE pointer
 int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
-
+// Saves current record name
 void wfdb_setirec(const char *record_name);
+// Gets current record name
 char *wfdb_getirec();
 
+// Produces an error message
+void wfdb_error(const char *format, ...);
+// Produces an error message
+char* wfdberror();
+
+/* These functions are compiled only if WFDB_NETFILES is non-zero; they permit
+access to remote files via http or ftp (using libcurl) as
+well as to local files (using the standard C I/O functions).  The functions in
+this group are intended primarily for use by other WFDB library functions, but
+may also be called directly by WFDB applications that need to read remote
+files. Unlike other private functions in the WFDB library, the interfaces to
+these are not likely to change, since they are designed to emulate the
+similarly-named ANSI/ISO C standard I/O functions:
+*/
+
+// Emulates clearerr
 void wfdb_clearerr(WFDB_FILE *fp);
+// Emulates feof
 int wfdb_feof(WFDB_FILE *fp);
+// Emulates ferror
 int wfdb_ferror(WFDB_FILE *fp);
+// Emulates fflush, for local files only
 int wfdb_fflush(WFDB_FILE *fp);
+// Emulates fgets
 char *wfdb_fgets(char *s, int size, WFDB_FILE *fp);
+// Emulates fread
 size_t wfdb_fread(void *ptr, size_t size, size_t nmemb, WFDB_FILE *fp);
+// Emulates fseek
 int wfdb_fseek(WFDB_FILE *fp, long offset, int whence);
+// Emulates ftell
 long wfdb_ftell(WFDB_FILE *fp);
+// Emulates fwrite, for local files only
 size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb,
                           WFDB_FILE *fp);
+// Emulates getc
 int wfdb_getc(WFDB_FILE *fp);
+// Emulates putc, for local files only
 int wfdb_putc(int c, WFDB_FILE *fp);
+// Emulates fclose
+int wfdb_fclose(WFDB_FILE *fp);
+// Emulates fopen, but returns a WFDB_FILE pointer
+WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
