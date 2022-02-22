@@ -1,165 +1,14 @@
-/* file: wfdbio.c	G. Moody	18 November 1988
-                        Last revised:    4 November 2020      wfdblib 10.7.0
+/* file: wfdbio.cc	G. Moody	18 November 1988
+
 Low-level I/O functions for the WFDB library
 
-_______________________________________________________________________________
-wfdb: a library for reading and writing annotated waveforms (time series data)
-Copyright (C) 1988-2013 George B. Moody
-
-This library is free software; you can redistribute it and/or modify it under
-the terms of the GNU Library General Public License as published by the Free
-Software Foundation; either version 2 of the License, or (at your option) any
-later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU Library General Public License for more
-details.
-
-You should have received a copy of the GNU Library General Public License along
-with this library; if not, see <http://www.gnu.org/licenses/>.
-
-You may contact the author by e-mail (wfdb@physionet.org) or postal mail
-(MIT Room E25-505A, Cambridge, MA 02139 USA).  For updates to this software,
-please visit PhysioNet (http://www.physionet.org/).
-_______________________________________________________________________________
-
-This file contains a large number of functions related to input and output.
-To make them easier to find, the functions are arranged in several groups as
-outlined below;  they appear in the body of the file in the same order that
-their names appear in these comments.
-
-This file contains definitions of the following WFDB library functions:
- getwfdb		(returns the database path string)
- setwfdb		(sets the database path string)
- resetwfdb [10.5.7]	(restores the database path to its initial value)
- wfdbquiet		(suppresses WFDB library error messages)
- wfdbverbose [4.0]	(enables WFDB library error messages)
- wfdberror [4.5]	(returns the most recent WFDB library error message)
- wfdbfile [4.3]		(returns the complete pathname of a WFDB file)
- wfdbmemerr [10.4.6]    (set behavior on memory errors)
-
-These functions expose config strings needed by the WFDB Toolkit for Matlab:
- wfdbversion [10.4.20]  (return the string defined by VERSION)
- wfdbldflags [10.4.20]  (return the string defined by LDFLAGS)
- wfdbcflags [10.4.20]   (return the string defined by CFLAGS)
- wfdbdefwfdb [10.4.20]  (return the string defined by DEFWFDB)
- wfdbdefwfdbcal [10.4.20] (return the string defined by DEFWFDBCAL)
-
-These functions, also defined here, are intended only for the use of WFDB
-library functions defined elsewhere:
-
- wfdb_me_fatal [10.4.6] (indicates if memory errors are fatal)
- wfdb_g16		(reads a 16-bit integer)
- wfdb_g32		(reads a 32-bit integer)
- wfdb_p16		(writes a 16-bit integer)
- wfdb_p32		(writes a 32-bit integer)
- wfdb_free_path_list [10.0.1] (frees data structures assigned to the path list)
- wfdb_parse_path [10.0.1] (splits WFDB path into components)
- wfdb_export_config [10.3.9] (puts the WFDB path, etc. into the environment)
- wfdb_getiwfdb [6.2]	(sets WFDB from the contents of a file)
- wfdb_addtopath [6.2]	(adds path component of string argument to WFDB path)
- wfdb_vasprintf		(allocates and formats a message)
- wfdb_asprintf		(allocates and formats a message)
- wfdb_error		(produces an error message)
- wfdb_fprintf [10.0.1]	(like fprintf, but first arg is a WFDB_FILE pointer)
- wfdb_open		(finds and opens database files)
- wfdb_checkname		(checks record and annotator names for validity)
- wfdb_striphea [10.4.5] (removes trailing '.hea' from a record name, if present)
- wfdb_setirec [9.7]	(saves current record name)
- wfdb_getirec [10.5.12]	(gets current record name)
-
-(Numbers in brackets in the lists above indicate the first version of the WFDB
-library that included the corresponding function.  Functions not so marked
-have been included in all published versions of the WFDB library.)
-
-The next two groups of functions, which together enable input from remote
-(http and ftp) files, were first implemented in version 10.0.1 by Michael
-Dakin.  Thanks, Mike!
-
-These functions, defined here if WFDB_NETFILES is non-zero, are intended only
-for the use of the functions in the next group below (their definitions are not
-visible outside of this file):
- www_parse_passwords	(load username/password information)
- www_userpwd		(get username/password for a given url)
- wfdb_wwwquit		(shut down libcurl cleanly)
- www_init		(initialize libcurl)
- www_perform_request    (request a url and check the response code)
- www_get_cont_len	(find length of data for a given url)
- www_get_url_range_chunk (get a block of data from a given url)
- www_get_url_chunk	(get all data from a given url)
- nf_delete		(free data structures associated with an open netfile)
- nf_new			(associate a netfile with a url)
- nf_get_range		(get a block of data from a netfile)
- nf_feof		(emulates feof, for netfiles)
- nf_eof			(TRUE if netfile pointer points to EOF)
- nf_fopen		(emulate fopen, for netfiles; read-only access)
- nf_fclose		(emulates fclose, for netfiles)
- nf_fgetc		(emulates fgetc, for netfiles)
- nf_fgets		(emulates fgets, for netfiles)
- nf_fread		(emulates fread, for netfiles)
- nf_fseek		(emulates fseek, for netfiles)
- nf_ftell		(emulates ftell, for netfiles)
- nf_ferror		(emulates ferror, for netfiles)
- nf_clearerr		(emulates clearerr, for netfiles)
- nf_fflush		(emulates fflush, for netfiles) [stub]
- nf_fwrite		(emulates fwrite, for netfiles) [stub]
- nf_putc		(emulates putc, for netfiles) [stub]
- nf_vfprintf		(emulates fprintf, for netfiles) [stub]
-
-In the current version of the WFDB library, output to remote files is not
-implemented;  for this reason, several of the functions listed above are
-stubs (placeholders) only, as noted.
-
-These functions, also defined here, are compiled only if WFDB_NETFILES is non-
-zero; they permit access to remote files via http or ftp (using libcurl) as
-well as to local files (using the standard C I/O functions).  The functions in
-this group are intended primarily for use by other WFDB library functions, but
-may also be called directly by WFDB applications that need to read remote
-files. Unlike other private functions in the WFDB library, the interfaces to
-these are not likely to change, since they are designed to emulate the
-similarly-named ANSI/ISO C standard I/O functions:
- wfdb_clearerr		(emulates clearerr)
- wfdb_feof		(emulates feof)
- wfdb_ferror		(emulates ferror)
- wfdb_fflush		(emulates fflush, for local files only)
- wfdb_fgets		(emulates fgets)
- wfdb_fread		(emulates fread)
- wfdb_fseek		(emulates fseek)
- wfdb_ftell		(emulates ftell)
- wfdb_fwrite		(emulates fwrite, for local files only)
- wfdb_getc		(emulates getc)
- wfdb_putc		(emulates putc, for local files only)
- wfdb_fclose		(emulates fclose)
- wfdb_fopen		(emulates fopen, but returns a WFDB_FILE pointer)
-
-(If WFDB_NETFILES is zero, wfdblib.h defines all but the last two of these
-functions as macros that invoke the standard I/O functions that they would
-otherwise emulate.  The implementations of wfdb_fclose and wfdb_fopen are
-below;  they include a small amount of code compiled only if WFDB_NETFILES
-is non-zero.  All of these functions are new in version 10.0.1.)
-
-Finally, this file includes several miscellaneous functions needed only in
-certain environments:
- strtok		(parses strings into tokens, for old C libraries that need it)
- LibMain        (initializes 16-bit MS-Windows DLL version of this library)
- WEP		(cleans up on exit from 16-bit MS-Windows DLL)
- wgetenv	(replacement for getenv, for use with MS-Windows 16-bit DLLs)
- DllMain	(initialize/cleanup 32-bit MS-Windows DLL)
-
-Functions in signal.c and calib.c use the C library function strtok() to parse
-lines into tokens;  this function (and its associated header file <string.h>)
-may not be available in certain older C libraries (e.g., UNIX version 7 and BSD
-4.2).  This file includes a portable implementation of strtok(), which can be
-obtained if necessary by defining the symbol NOSTRTOK when compiling this
-module.
 */
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include "wfdblib.h"
+#include "wfdblib.hh"
 
 /* WFDB library functions */
 
@@ -174,8 +23,6 @@ specified (local) FILE (using wfdb_getiwfdb); such files may be nested up to
 10 levels. */
 
 static char *wfdbpath = NULL, *wfdbpath_init = NULL;
-
-static const char *wfdb_getiwfdb(char **p);
 
 /* resetwfdb is called by wfdbquit, and can be called within an application,
 to restore the WFDB path to the value that was returned by the first call
@@ -765,7 +612,7 @@ static char *error_message;
 #define WFDB_BUILD_DATE __DATE__
 #endif
 
-FSTRING wfdberror(void) {
+char* wfdberror() {
   if (!error_flag)
     wfdb_asprintf(&error_message, "WFDB library version %d.%d.%d (%s).\n",
                   WFDB_MAJOR, WFDB_MINOR, WFDB_RELEASE, WFDB_BUILD_DATE);
@@ -775,7 +622,7 @@ FSTRING wfdberror(void) {
     return ("WFDB: cannot allocate memory for error message");
 }
 
-FVOID wfdb_error(const char *format, ...) {
+void wfdb_error(const char *format, ...) {
   va_list arguments;
 
   error_flag = 1;
