@@ -13,9 +13,9 @@ WFDB library type, constant, structure, and function interface definitions
 #endif
 
 /* WFDB library version. */
-constexpr char *WFDB_MAJOR = "20";
-constexpr char *WFDB_MINOR = "0";
-constexpr char *WFDB_RELEASE = "0";
+constexpr char WFDB_MAJOR[] = "20";
+constexpr char WFDB_MINOR[] = "0";
+constexpr char WFDB_RELEASE[] = "0";
 constexpr int WFDB_NETFILES =
     1; /* if 1, library includes code for HTTP, FTP clients */
 
