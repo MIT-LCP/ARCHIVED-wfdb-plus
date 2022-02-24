@@ -1,6 +1,7 @@
 #include "netfiles.hh"
 
 #include <errno.h>
+#include <stdlib.h>
 
 // State tracking
 static int nf_open_files = 0;         /* number of open netfiles */
@@ -13,7 +14,7 @@ static char curl_error_buf[CURL_ERROR_SIZE];
 
 static char **passwords;
 
-int nf_vfprintf(netfile *nf, const char *format, va_list ap) {
+int nf_vfprintf(Netfile *nf, const char *format, va_list ap) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return 0;
@@ -178,7 +179,7 @@ Chunk *www_get_url_chunk(const char *url) {
   return (chunk);
 }
 
-void nf_delete(netfile *nf) {
+void nf_delete(Netfile *nf) {
   if (nf) {
     SFREE(nf->url);
     SFREE(nf->data);
@@ -187,7 +188,7 @@ void nf_delete(netfile *nf) {
   }
 }
 
-Chunk *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
+Chunk *nf_get_url_range_chunk(Netfile *nf, long startb, long len) {
   char *url;
   Chunk *chunk;
   unsigned int request_time;
@@ -221,7 +222,7 @@ Chunk *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
    attempts to read the entire file into memory.  If there is insufficient
    memory, if the file contains no data, or if the file does not exist (the
    most common of these three cases), nf_new returns a NULL pointer; otherwise,
-   it allocates, fills in, and returns a pointer to a netfile structure that
+   it allocates, fills in, and returns a pointer to a Netfile structure that
    can be used by nf_fread, etc., to obtain the contents of the file.
 
    It would be useful to be able to copy a file that cannot be read in segments
@@ -229,8 +230,8 @@ Chunk *nf_get_url_range_chunk(netfile *nf, long startb, long len) {
    to do this would be to invoke
       HTLoadToFile(url, request, filename);
 */
-netfile *nf_new(const char *url) {
-  netfile *nf;
+Netfile *nf_new(const char *url) {
+  Netfile *nf;
   Chunk *chunk = NULL;
 
   SUALLOC(nf, 1, sizeof(netfile));
@@ -304,7 +305,7 @@ netfile *nf_new(const char *url) {
   return (nf);
 }
 
-long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
+long nf_get_range(Netfile *nf, long startb, long len, char *rbuf) {
   Chunk *chunk = NULL;
   char *rp = NULL;
   long avail = nf->cont_len - startb;
@@ -369,13 +370,13 @@ long nf_get_range(netfile *nf, long startb, long len, char *rbuf) {
 
 /* nf_feof returns true after reading past the end of a file but before
    repositioning the pos in the file. */
-int nf_feof(netfile *nf) { return ((nf->err == NF_EOF_ERR) ? 1 : 0); }
+int nf_feof(Netfile *nf) { return ((nf->err == NF_EOF_ERR) ? 1 : 0); }
 
 /* nf_eof returns true if the file pointer is at the EOF. */
-int nf_eof(netfile *nf) { return (nf->pos >= nf->cont_len) ? 1 : 0; }
+int nf_eof(Netfile *nf) { return (nf->pos >= nf->cont_len) ? 1 : 0; }
 
-netfile *nf_fopen(const char *url, const char *mode) {
-  netfile *nf = NULL;
+Netfile *nf_fopen(const char *url, const char *mode) {
+  Netfile *nf = NULL;
 
   if (!www_done_init) www_init();
   if (*mode == 'w' || *mode == 'a')
@@ -387,13 +388,13 @@ netfile *nf_fopen(const char *url, const char *mode) {
   return (nf);
 }
 
-int nf_fclose(netfile *nf) {
+int nf_fclose(Netfile *nf) {
   nf_delete(nf);
   nf_open_files--;
   return (0);
 }
 
-int nf_fgetc(netfile *nf) {
+int nf_fgetc(Netfile *nf) {
   char c;
 
   if (nf_get_range(nf, nf->pos++, 1, &c)) return (c & 0xff);
@@ -401,7 +402,7 @@ int nf_fgetc(netfile *nf) {
   return (EOF);
 }
 
-static char *nf_fgets(char *s, int size, netfile *nf) {
+static char *nf_fgets(char *s, int size, Netfile *nf) {
   int c = 0, i = 0;
 
   if (s == NULL) return (NULL);
@@ -411,7 +412,7 @@ static char *nf_fgets(char *s, int size, netfile *nf) {
   return (s);
 }
 
-size_t nf_fread(void *ptr, size_t size, size_t nmemb, netfile *nf) {
+size_t nf_fread(void *ptr, size_t size, size_t nmemb, Netfile *nf) {
   long bytes_available, bytes_read = 0L, bytes_requested = size * nmemb;
 
   if (nf == NULL || ptr == NULL || bytes_requested == 0) return ((size_t)0);
@@ -422,7 +423,7 @@ size_t nf_fread(void *ptr, size_t size, size_t nmemb, netfile *nf) {
   return ((size_t)(bytes_read / size));
 }
 
-int nf_fseek(netfile *nf, long offset, int whence) {
+int nf_fseek(Netfile *nf, long offset, int whence) {
   int ret = -1;
 
   if (nf) switch (whence) {
@@ -453,25 +454,25 @@ int nf_fseek(netfile *nf, long offset, int whence) {
   return (ret);
 }
 
-long nf_ftell(netfile *nf) { return (nf->pos); }
+long nf_ftell(Netfile *nf) { return (nf->pos); }
 
-int nf_ferror(netfile *nf) { return ((nf->err == NF_REAL_ERR) ? 1 : 0); }
+int nf_ferror(Netfile *nf) { return ((nf->err == NF_REAL_ERR) ? 1 : 0); }
 
-void nf_clearerr(netfile *nf) { nf->err = NF_NO_ERR; }
+void nf_clearerr(Netfile *nf) { nf->err = NF_NO_ERR; }
 
-int nf_fflush(netfile *nf) {
+int nf_fflush(Netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (EOF);
 }
 
-size_t nf_fwrite(const void *ptr, size_t size, size_t nmemb, netfile *nf) {
+size_t nf_fwrite(const void *ptr, size_t size, size_t nmemb, Netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (0);
 }
 
-int nf_putc(int c, netfile *nf) {
+int nf_putc(int c, Netfile *nf) {
   /* no support yet for writing to remote files */
   errno = EROFS;
   return (EOF);
@@ -485,7 +486,7 @@ void wfdb_wwwquit() {
     curl_ua = NULL;
     curl_global_cleanup();
 #endif
-    www_done_init = FALSE;
+    www_done_init = 0;
     for (i = 0; passwords && passwords[i]; i++) SFREE(passwords[i]);
     SFREE(passwords);
   }
@@ -527,7 +528,7 @@ void www_init() {
       curl_easy_setopt(curl_ua, CURLOPT_VERBOSE, 1L);
 
     atexit(wfdb_wwwquit);
-    www_done_init = TRUE;
+    www_done_init = 1;
   }
 }
 

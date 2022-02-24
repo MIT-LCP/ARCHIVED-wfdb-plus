@@ -71,7 +71,7 @@ symbols reserved to the library begin with the characters "wfdb_".
 /* Structures used by internal WFDB library functions only */
 struct WFDB_FILE {
   FILE *fp;
-  netfile *netfp;
+  Netfile *netfp;
   int type;  // TODO: Replace with enum
 };
 
