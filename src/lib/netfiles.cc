@@ -1,8 +1,12 @@
 #include "netfiles.hh"
-#include "wfdb.hh"
 
+#include <absl/strings/str_format.h>
 #include <errno.h>
 #include <stdlib.h>
+
+#include <string>
+
+#include "wfdb.hh"
 
 // State tracking
 static int nf_open_files = 0;         /* number of open netfiles */
@@ -22,25 +26,19 @@ int nf_vfprintf(Netfile *nf, const char *format, va_list ap) {
 }
 
 /* Construct the User-Agent string to be sent with HTTP requests. */
-char *curl_get_ua_string() {
-  char *libcurl_ver;
-  static char *s = NULL;
-
-  libcurl_ver = curl_version();
-
+std::string curl_get_ua_string() {
   /* The +3XX flag informs the server that this client understands
      and supports HTTP redirection (CURLOPT_FOLLOWLOCATION
      enabled.) */
-  wfdb_asprintf(&s, "libwfdb/%d.%d.%d (%s +3XX)", WFDB_MAJOR, WFDB_MINOR,
-                WFDB_RELEASE, libcurl_ver);
-  return (s);
+  return absl::StrFormat("libwfdb/%d.%d.%d (%s +3XX)", WFDB_MAJOR, WFDB_MINOR,
+                         WFDB_RELEASE, curl_version());
 }
 
 /* This function will print out the curl error message if there was an
-   error.  Zero means there was no error. */
+   error. Zero means there was no error. */
 int curl_try(CURLcode err) {
   if (err) {
-    wfdb_error("curl error: %s\n", curl_error_buf);
+    wfdb_error(absl::StrFormat("curl error: %s\n", curl_error_buf));
   }
   return err;
 }
@@ -261,7 +259,7 @@ Netfile *nf_new(const char *url) {
         (chunk->size == page_size || chunk->size == chunk->total_size)) {
       /* Range request works and the total file size is known. */
       nf->cont_len = chunk->total_size;
-      nf->mode = NF_Chunk_MODE;
+      nf->mode = NetfileMode::kChunkMode;
     } else if (chunk->total_size == 0) {
       if (page_size > 0 && chunk->size == page_size)
         /* This might be a range response from a protocol that
@@ -272,10 +270,11 @@ Netfile *nf_new(const char *url) {
       else
         nf->cont_len = chunk->size;
 
-      if (nf->cont_len > chunk->size)
-        nf->mode = NF_Chunk_MODE;
-      else
-        nf->mode = NF_FULL_MODE;
+      if (nf->cont_len > chunk->size) {
+        nf->mode = NetfileMode::kChunkMode;
+      } else {
+        nf->mode = NetfileMode::kFullMode;
+      }
     } else {
       wfdb_error("nf_new: unexpected range response (%lu-%lu/%lu)\n",
                  chunk->start_pos, chunk->end_pos, chunk->total_size);
@@ -316,7 +315,7 @@ long nf_get_range(Netfile *nf, long startb, long len, char *rbuf) {
       startb >= nf->cont_len || len <= 0L || rbuf == NULL)
     return (0L); /* invalid inputs -- fail silently */
 
-  if (nf->mode == NF_Chunk_MODE) { /* range requests acceptable */
+  if (nf->mode == NetfileMode::kChunkMode) { /* range requests acceptable */
     long rlen = (avail >= page_size) ? page_size : avail;
 
     if (len <= page_size) { /* short request -- check if cached */

@@ -3,10 +3,17 @@
 
 #include <curl/curl.h>
 
+#include <string>
+
+enum class NetfileMode {
+  kChunkMode = 0, /* http range requests supported */
+  kFullMode = 1,  /* http range requests not supported */
+};
+
 struct Netfile {
   char *url;
   char *data;
-  int mode;
+  NetfileMode mode;
   long base_addr;
   long cont_len;
   long pos;
@@ -42,10 +49,6 @@ struct Chunk {
 #define NF_NO_ERR 0   /* no errors */
 #define NF_EOF_ERR 1  /* file pointer at EOF */
 #define NF_REAL_ERR 2 /* read request failed */
-
-/* values for Netfile 'mode' field */
-#define NF_CHUNK_MODE 0 /* http range requests supported */
-#define NF_FULL_MODE 1  /* http range requests not supported */
 
 /* The next group of functions, which enable input from remote
 (http and ftp) files, were first implemented in version 10.0.1 by Michael
@@ -113,7 +116,7 @@ int nf_putc(int c, Netfile *nf);
 // emulates fprintf, for netfiles) [stub]
 int nf_vfprintf(Netfile *nf, const char *format, va_list ap);
 
-char *curl_get_ua_string();
+std::string curl_get_ua_string();
 int curl_try(CURLcode err);
 unsigned int www_time();
 size_t curl_null_write(void *ptr, size_t size, size_t nmemb, void *stream);
