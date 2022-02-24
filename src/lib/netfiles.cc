@@ -1,4 +1,5 @@
 #include "netfiles.hh"
+#include "wfdb.hh"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -234,7 +235,7 @@ Netfile *nf_new(const char *url) {
   Netfile *nf;
   Chunk *chunk = NULL;
 
-  SUALLOC(nf, 1, sizeof(netfile));
+  SUALLOC(nf, 1, sizeof(Netfile));
   if (nf && url && *url) {
     SSTRCPY(nf->url, url);
     nf->base_addr = 0;
