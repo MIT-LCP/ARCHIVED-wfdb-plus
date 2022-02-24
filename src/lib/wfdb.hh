@@ -6,11 +6,18 @@ WFDB library type, constant, structure, and function interface definitions
 #ifndef WFDB_LIB_WFDB_H_
 #define WFDB_LIB_WFDB_H_
 
+#include <string>
+
+#ifndef WFDB_BUILD_DATE
+#define WFDB_BUILD_DATE __DATE__
+#endif
+
 /* WFDB library version. */
-constexpr char* WFDB_MAJOR = "20";
-constexpr char* WFDB_MINOR = "0";
-constexpr char* WFDB_RELEASE = "0";
-constexpr int WFDB_NETFILES = 1; /* if 1, library includes code for HTTP, FTP clients */
+constexpr char *WFDB_MAJOR = "20";
+constexpr char *WFDB_MINOR = "0";
+constexpr char *WFDB_RELEASE = "0";
+constexpr int WFDB_NETFILES =
+    1; /* if 1, library includes code for HTTP, FTP clients */
 
 /* Simple data types */
 typedef int WFDB_Sample;             /* units are adus */
@@ -274,5 +281,14 @@ typedef struct WFDB_seginfo WFDB_Seginfo;
       strcpy(P, WFDB_tmp);                        \
     }                                             \
   } while (0)
+
+// Produces an error message
+void wfdb_error(std::string_view);
+// Produces the last error message
+std::string wfdberror();
+// Suppresses WFDB library error messages
+void wfdbquiet();
+// Enables WFDB library error messages
+void wfdbverbose();
 
 #endif  // WFDB_LIB_WFDB_H_

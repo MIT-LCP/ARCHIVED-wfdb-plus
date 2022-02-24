@@ -86,10 +86,6 @@ char* getwfdb();
 void setwfdb(const char *database_path_string);
 // restores the database path to its initial value
 void resetwfdb();
-// Suppresses WFDB library error messages
-void wfdbquiet();
-// Enables WFDB library error messages
-void wfdbverbose();
 
 // Returns the complete pathname of a WFDB file
 char* wfdbfile(const char *file_type, char *record);
@@ -143,11 +139,6 @@ static const char *wfdb_getiwfdb(char **p);
 void wfdb_addtopath(const char *pathname);
 __attribute__((__format__(__printf__, 2, 3)))
 
-// Allocates and formats a message
-int wfdb_asprintf(char **buffer, const char *format, ...);
-// Allocates and formats a message
-int wfdb_vasprintf(char **buffer, const char *format, ...);
-
 // Like fprintf, but first arg is a WFDB_FILE pointer
 int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
 // Saves current record name
@@ -155,10 +146,7 @@ void wfdb_setirec(const char *record_name);
 // Gets current record name
 char *wfdb_getirec();
 
-// Produces an error message
-void wfdb_error(const char *format, ...);
-// Produces an error message
-char* wfdberror();
+
 
 /* These functions are compiled only if WFDB_NETFILES is non-zero; they permit
 access to remote files via http or ftp (using libcurl) as
