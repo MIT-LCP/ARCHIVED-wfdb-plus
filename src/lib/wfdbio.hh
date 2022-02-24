@@ -1,4 +1,4 @@
-/* file: wfdblib.h	G. Moody	13 April 1989
+/* file: wfdbio.hh	G. Moody	13 April 1989
 
 External definitions for WFDB library private functions
 

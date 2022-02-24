@@ -101,7 +101,7 @@ may be attached to the same signal provided that their num fields are unique.
 
 #include "ecgcodes.h"
 #include "ecgmap.h"
-#include "wfdblib.hh"
+#include "wfdbio.hh"
 
 /* Annotation word format */
 #define CODE 0176000 /* annotation code segment of annotation word */

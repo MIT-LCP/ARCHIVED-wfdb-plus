@@ -1,3 +1,6 @@
+#ifndef WFDB_LIB_NETFILES_H_
+#define WFDB_LIB_NETFILES_H_
+
 #include <curl/curl.h>
 
 struct netfile {
@@ -121,3 +124,5 @@ size_t curl_chunk_header_write(void *ptr, size_t size, size_t nmemb,
                                void *stream);
 size_t curl_chunk_write(void *ptr, size_t size, size_t nmemb, void *stream);
 void curl_chunk_putb(Chunk *chunk, char *data, size_t len);
+
+#endif  // WFDB_LIB_NETFILES_H_
