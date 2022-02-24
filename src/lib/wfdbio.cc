@@ -592,51 +592,6 @@ int wfdb_asprintf(char **buffer, const char *format, ...) {
   return (length);
 }
 
-/* The wfdb_error function handles error messages, normally by printing them
-on the standard error output.  Its arguments can be any set of arguments which
-would be legal for printf, i.e., the first one is a format string, and any
-additional arguments are values to be filled into the '%*' placeholders
-in the format string.  It can be silenced by invoking wfdbquiet(), or
-re-enabled by invoking wfdbverbose().
-
-The function wfdberror (without the underscore) returns the most recent error
-message passed to wfdb_error (even if output was suppressed by wfdbquiet).
-This feature permits programs to handle errors somewhat more flexibly (in
-windowing environments, for example, where using the standard error output may
-be inappropriate).
-*/
-
-static int error_flag;
-static char *error_message;
-
-#ifndef WFDB_BUILD_DATE
-#define WFDB_BUILD_DATE __DATE__
-#endif
-
-char* wfdberror() {
-  if (!error_flag)
-    wfdb_asprintf(&error_message, "WFDB library version %d.%d.%d (%s).\n",
-                  WFDB_MAJOR, WFDB_MINOR, WFDB_RELEASE, WFDB_BUILD_DATE);
-  if (error_message)
-    return (error_message);
-  else
-    return ("WFDB: cannot allocate memory for error message");
-}
-
-void wfdb_error(const char *format, ...) {
-  va_list arguments;
-
-  error_flag = 1;
-  va_start(arguments, format);
-  wfdb_vasprintf(&error_message, format, arguments);
-  va_end(arguments);
-
-  if (error_print) {
-    (void)fprintf(stderr, "%s", wfdberror());
-    (void)fflush(stderr);
-  }
-}
-
 /* The wfdb_fprintf function handles all formatted output to files.  It is
 used in the same way as the standard fprintf function, except that its first
 argument is a pointer to a WFDB_FILE rather than a FILE. */
