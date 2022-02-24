@@ -3,8 +3,8 @@
 WFDB library type, constant, structure, and function interface definitions
 
 */
-#ifndef wfdb_WFDB_H /* avoid multiple definitions */
-#define wfdb_WFDB_H
+#ifndef WFDB_LIB_WFDB_H_
+#define WFDB_LIB_WFDB_H_
 
 /* WFDB library version. */
 constexpr char* WFDB_MAJOR = "20";
@@ -275,5 +275,4 @@ typedef struct WFDB_seginfo WFDB_Seginfo;
     }                                             \
   } while (0)
 
-
-#endif
+#endif  // WFDB_LIB_WFDB_H_

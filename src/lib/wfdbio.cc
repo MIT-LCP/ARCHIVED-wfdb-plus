@@ -8,7 +8,8 @@ Low-level I/O functions for the WFDB library
 #include <string.h>
 #include <time.h>
 
-#include "wfdblib.hh"
+#include "wfdb.hh"
+#include "wfdbio.hh"
 
 /* WFDB library functions */
 

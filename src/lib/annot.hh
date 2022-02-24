@@ -1,3 +1,6 @@
+#ifndef WFDB_LIB_ANNOT_H_
+#define WFDB_LIB_ANNOT_H_
+
 #include "wfdb.hh"
 
 void wfdb_anclose();
@@ -36,3 +39,5 @@ int wfdb_ammap(int code);
 int wfdb_mamap(int code, int subtype);
 int wfdb_annpos(int code);
 int wfdb_setannpos(int code, int newval);
+
+#endif  // WFDB_LIB_ANNOT_H_

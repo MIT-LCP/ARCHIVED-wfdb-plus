@@ -178,7 +178,7 @@ void example(void)
 #include <errno.h>
 #include <limits.h>
 
-#include "wfdblib.hh"
+#include "wfdbio.hh"
 
 #ifndef NOTIME
 #include <time.h>

@@ -1,3 +1,6 @@
+#ifndef WFDB_LIB_SIGNAL_H_
+#define WFDB_LIB_SIGNAL_H_
+
 #include "wfdb.hh"
 
 void wfdb_sampquit();
@@ -56,3 +59,5 @@ void setbasecount(double count);
 int setbasetime(char *time_string);
 int setibsize(int input_buffer_size);
 int setobsize(int output_buffer_size);
+
+#endif  // WFDB_LIB_SIGNAL_H_

@@ -47,7 +47,7 @@ environment variable is not set.
 
 #include "calib.hh"
 
-#include "wfdblib.hh"
+#include "wfdbio.hh"
 
 /* Calibration list entries each contain a WFDB_Calinfo record (crec) and
    a forward pointer (next). */
