@@ -30,9 +30,9 @@ This file contains definitions of the following WFDB library functions:
 */
 #include "wfdbinit.h"
 
-#include "annot.h"
-#include "signal.h"
-#include "wfdblib.h"
+#include "annot.hh"
+#include "signal.hh"
+#include "wfdblib.hh"
 
 int wfdbinit(char *record, const WFDB_Anninfo *aiarray, unsigned int nann,
              WFDB_Siginfo *siarray, unsigned int nsig) {

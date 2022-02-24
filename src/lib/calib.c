@@ -45,7 +45,9 @@ Beginning with version 8.3, calopen() uses the default calibration file name
 environment variable is not set.
 */
 
-#include "wfdblib.h"
+#include "calib.hh"
+
+#include "wfdblib.hh"
 
 /* Calibration list entries each contain a WFDB_Calinfo record (crec) and
    a forward pointer (next). */
@@ -66,7 +68,7 @@ static struct cle {
    otherwise, the "+" is discarded before attempting to open the file,
    which may be in any directory in the WFDB path.  If the file can be read,
    its contents are appended to the calibration list. */
-FINT calopen(const char *cfname)
+int calopen(const char *cfname)
 {
     WFDB_FILE *cfile;
     char buf[128], *p1, *p2, *p3, *p4, *p5, *p6;
@@ -156,7 +158,7 @@ FINT calopen(const char *cfname)
    of finding a match.  If a match is found, it is copied into the caller's
    WFDB_Calinfo structure.  The caller must not write over the storage
    addressed by the desc and units fields. */
-FINT getcal(const char *desc, const char *units, WFDB_Calinfo *cal)
+int getcal(const char *desc, const char *units, WFDB_Calinfo *cal)
 {
     for (this_cle = first_cle; this_cle; this_cle = this_cle->next) {
 	if ((desc == NULL || strncmp(desc, this_cle->sigtype,
@@ -176,7 +178,7 @@ FINT getcal(const char *desc, const char *units, WFDB_Calinfo *cal)
 
 /* Function putcal appends the caller's WFDB_Calinfo structure to the end of
    the calibration list. */
-FINT putcal(const WFDB_Calinfo *cal)
+int putcal(const WFDB_Calinfo *cal)
 {
     SUALLOC(this_cle, 1, sizeof(struct cle));
     SSTRCPY(this_cle->sigtype, cal->sigtype);
@@ -198,7 +200,7 @@ FINT putcal(const WFDB_Calinfo *cal)
 
 /* Function newcal generates a calibration file based on the contents of the
    calibration list. */
-FINT newcal(const char *cfname)
+int newcal(const char *cfname)
 {
     WFDB_FILE *cfile;
     int errflag;
@@ -249,7 +251,7 @@ FINT newcal(const char *cfname)
 }
 
 /* Function flushcal empties the calibration list. */
-FVOID flushcal(void)
+void flushcal(void)
 {
     while (first_cle) {
 	SFREE(first_cle->sigtype);
@@ -260,4 +262,4 @@ FVOID flushcal(void)
     }
 }
 
-	
+

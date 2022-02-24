@@ -173,12 +173,12 @@ void example(void)
 }
 #endif
 
-#include "signal.h"
+#include "signal.hh"
 
 #include <errno.h>
 #include <limits.h>
 
-#include "wfdblib.h"
+#include "wfdblib.hh"
 
 #ifndef NOTIME
 #include <time.h>
@@ -2136,7 +2136,7 @@ static int rgetvec(WFDB_Sample *vector) {
 
 /* WFDB library functions. */
 
-FINT isigopen(char *record, WFDB_Siginfo *siarray, int nsig) {
+int isigopen(char *record, WFDB_Siginfo *siarray, int nsig) {
   int navail, nn, spflimit;
   int first_segment = 0;
   struct hsdata *hs;
@@ -2400,7 +2400,7 @@ static int openosig(const char *func, WFDB_Siginfo *si_out,
   return (s);
 }
 
-FINT osigopen(char *record, WFDB_Siginfo *siarray, unsigned int nsig) {
+int osigopen(char *record, WFDB_Siginfo *siarray, unsigned int nsig) {
   int n;
   WFDB_Signal s;
   WFDB_Siginfo *hsi;
@@ -2428,7 +2428,7 @@ FINT osigopen(char *record, WFDB_Siginfo *siarray, unsigned int nsig) {
   return (s);
 }
 
-FINT osigfopen(const WFDB_Siginfo *siarray, unsigned int nsig) {
+int osigfopen(const WFDB_Siginfo *siarray, unsigned int nsig) {
   int s, stat;
   const WFDB_Siginfo *si;
 
@@ -2515,11 +2515,11 @@ problems if this rounding is omitted.  Thanks to Guido Muesch for pointing out
 this problem.
  */
 
-FINT getspf(void) {
+int getspf() {
   return ((sfreq != ffreq) ? (int)(sfreq / ffreq + 0.5) : 1);
 }
 
-FVOID setgvmode(int mode) {
+void setgvmode(int mode) {
   if (mode < 0) { /* (re)set to default mode */
     char *p;
 
@@ -2539,7 +2539,7 @@ FVOID setgvmode(int mode) {
   }
 }
 
-FINT getgvmode(void) { return (gvmode); }
+int getgvmode() { return (gvmode); }
 
 /* An application can specify the input sampling frequency it prefers by
    calling setifreq after opening the input record. */
@@ -2549,7 +2549,7 @@ static int rgvstat;
 static WFDB_Time rgvtime, gvtime;
 static WFDB_Sample *gv0, *gv1;
 
-FINT setifreq(WFDB_Frequency f) {
+int setifreq(WFDB_Frequency f) {
   WFDB_Frequency error, g = sfreq;
 
   if (g <= 0.0) {
@@ -2596,11 +2596,11 @@ FINT setifreq(WFDB_Frequency f) {
   }
 }
 
-FFREQUENCY getifreq(void) {
+WFDB_Frequency getifreq() {
   return (ifreq > (WFDB_Frequency)0 ? ifreq : sfreq);
 }
 
-FINT getvec(WFDB_Sample *vector) {
+int getvec(WFDB_Sample *vector) {
   int i, nsig;
 
   if (ifreq == 0.0 || ifreq == sfreq) /* no resampling necessary */
@@ -2625,7 +2625,7 @@ FINT getvec(WFDB_Sample *vector) {
   return (rgvstat);
 }
 
-FINT getframe(WFDB_Sample *vector) {
+int getframe(WFDB_Sample *vector) {
   int stat = -1;
 
   if (dsbuf) { /* signals must be deskewed */
@@ -2654,7 +2654,7 @@ FINT getframe(WFDB_Sample *vector) {
   return (stat);
 }
 
-FINT putvec(const WFDB_Sample *vector) {
+int putvec(const WFDB_Sample *vector) {
   int c, dif, stat = (int)nosig;
   struct osdata *os;
   struct ogdata *og;
@@ -2761,7 +2761,7 @@ FINT putvec(const WFDB_Sample *vector) {
   return (stat);
 }
 
-FINT isigsettime(WFDB_Time t) {
+int isigsettime(WFDB_Time t) {
   WFDB_Group g;
   WFDB_Time curtime;
   int stat = 0;
@@ -2784,7 +2784,7 @@ FINT isigsettime(WFDB_Time t) {
   return (stat);
 }
 
-FINT isgsettime(WFDB_Group g, WFDB_Time t) {
+int isgsettime(WFDB_Group g, WFDB_Time t) {
   int spf, stat, trem = 0;
   double tt;
 
@@ -2832,7 +2832,7 @@ FINT isgsettime(WFDB_Group g, WFDB_Time t) {
   return (stat);
 }
 
-FSITIME tnextvec(WFDB_Signal s, WFDB_Time t) {
+WFDB_Time tnextvec(WFDB_Signal s, WFDB_Time t) {
   int stat = 0;
   WFDB_Time tf;
 
@@ -2884,7 +2884,7 @@ FSITIME tnextvec(WFDB_Signal s, WFDB_Time t) {
   return ((WFDB_Time)stat);
 }
 
-FINT setibsize(int n) {
+int setibsize(int n) {
   if (nisig) {
     wfdb_error("setibsize: can't change buffer size after isigopen\n");
     return (-1);
@@ -2897,7 +2897,7 @@ FINT setibsize(int n) {
   return (ibsize = n);
 }
 
-FINT setobsize(int n) {
+int setobsize(int n) {
   if (nosig) {
     wfdb_error("setobsize: can't change buffer size after osig[f]open\n");
     return (-1);
@@ -2910,7 +2910,7 @@ FINT setobsize(int n) {
   return (obsize = n);
 }
 
-FINT newheader(char *record) {
+int newheader(char *record) {
   int stat;
   WFDB_Signal s;
   WFDB_Siginfo *osi;
@@ -2930,7 +2930,7 @@ FINT newheader(char *record) {
   return (stat);
 }
 
-FINT setheader(char *record, const WFDB_Siginfo *siarray, unsigned int nsig) {
+int setheader(char *record, const WFDB_Siginfo *siarray, unsigned int nsig) {
   char *p;
   WFDB_Signal s;
 
@@ -2999,12 +2999,12 @@ FINT setheader(char *record, const WFDB_Siginfo *siarray, unsigned int nsig) {
   return (0);
 }
 
-FINT getseginfo(WFDB_Seginfo **sarray) {
+int getseginfo(WFDB_Seginfo **sarray) {
   *sarray = segarray;
   return (segments);
 }
 
-FINT setmsheader(char *record, char **segment_name, unsigned int nsegments) {
+int setmsheader(char *record, char **segment_name, unsigned int nsegments) {
   WFDB_Frequency msfreq = 0, mscfreq = 0;
   double msbcount = 0;
   int n, nsig = 0, old_in_msrec = in_msrec;
@@ -3114,7 +3114,7 @@ FINT setmsheader(char *record, char **segment_name, unsigned int nsegments) {
   return (0);
 }
 
-FINT wfdbgetskew(WFDB_Signal s) {
+int wfdbgetskew(WFDB_Signal s) {
   if (s < nvsig)
     return (vsd[s]->skew);
   else
@@ -3123,18 +3123,18 @@ FINT wfdbgetskew(WFDB_Signal s) {
 
 /* Careful!!  This function is dangerous, and should be used only to restore
    skews when they have been reset as a side effect of using, e.g., sampfreq */
-FVOID wfdbsetiskew(WFDB_Signal s, int skew) {
+void wfdbsetiskew(WFDB_Signal s, int skew) {
   if (s < nvsig && skew >= 0 && skew < dsblen / tspf) vsd[s]->skew = skew;
 }
 
 /* Note: wfdbsetskew affects *only* the skew to be written by setheader.
    It does not affect how getframe deskews input signals, nor does it
    affect the value returned by wfdbgetskew. */
-FVOID wfdbsetskew(WFDB_Signal s, int skew) {
+void wfdbsetskew(WFDB_Signal s, int skew) {
   if (s < nosig) osd[s]->skew = skew;
 }
 
-FLONGINT wfdbgetstart(WFDB_Signal s) {
+long wfdbgetstart(WFDB_Signal s) {
   if (s < nisig)
     return (igd[vsd[s]->info.group]->start);
   else if (s == 0 && hsd != NULL)
@@ -3146,12 +3146,12 @@ FLONGINT wfdbgetstart(WFDB_Signal s) {
 /* Note: wfdbsetstart affects *only* the byte offset to be written by
    setheader.  It does not affect how isgsettime calculates byte offsets, nor
    does it affect the value returned by wfdbgetstart. */
-FVOID wfdbsetstart(WFDB_Signal s, long int bytes) {
+void wfdbsetstart(WFDB_Signal s, long int bytes) {
   if (s < nosig) ogd[osd[s]->info.group]->start = bytes;
   prolog_bytes = bytes;
 }
 
-FINT wfdbputprolog(const char *buf, long int size, WFDB_Signal s) {
+int wfdbputprolog(const char *buf, long int size, WFDB_Signal s) {
   long int n;
   WFDB_Group g = osd[s]->info.group;
 
@@ -3163,7 +3163,7 @@ FINT wfdbputprolog(const char *buf, long int size, WFDB_Signal s) {
 }
 
 /* Create a .info file (or open it for appending) */
-FINT setinfo(char *record) {
+int setinfo(char *record) {
   /* Close any previously opened output info file. */
   int stat = wfdb_oinfoclose();
 
@@ -3187,7 +3187,7 @@ FINT setinfo(char *record) {
 }
 
 /* Write an info string to the open output .hea or .info file */
-FINT putinfo(const char *s) {
+int putinfo(const char *s) {
   if (outinfo == NULL) {
     if (oheader)
       outinfo = oheader;
@@ -3206,7 +3206,7 @@ available) the .info file for the specified record, and return a pointer to the
 first one.  On subsequent calls, return a pointer to the next info string.
 Return NULL if there are no more info strings. */
 
-FSTRING getinfo(char *record) {
+char *getinfo(char *record) {
   static char buf[256], *p;
   static int i;
   WFDB_FILE *ifile;
@@ -3282,7 +3282,7 @@ FSTRING getinfo(char *record) {
     return (NULL);
 }
 
-FFREQUENCY sampfreq(char *record) {
+WFDB_Frequency sampfreq(char *record) {
   int n;
 
   /* Remove trailing .hea, if any, from record name. */
@@ -3303,7 +3303,7 @@ FFREQUENCY sampfreq(char *record) {
   return (sfreq);
 }
 
-FINT setsampfreq(WFDB_Frequency freq) {
+int setsampfreq(WFDB_Frequency freq) {
   if (freq >= 0.) {
     sfreq = ffreq = freq;
     if (spfmax == 0) spfmax = 1;
@@ -3324,7 +3324,7 @@ typedef long time_t;
 #endif
 #endif
 
-FINT setbasetime(char *string) {
+int setbasetime(char *string) {
   char *p;
 
   pdays = -1;
@@ -3369,7 +3369,7 @@ static char *ftimstr(WFDB_Time t, WFDB_Frequency f) {
   return (p);
 }
 
-FSTRING timstr(WFDB_Time t) {
+char *timstr(WFDB_Time t) {
   double f;
 
   if (ifreq > 0.)
@@ -3441,7 +3441,7 @@ static char *fmstimstr(WFDB_Time t, WFDB_Frequency f) {
   return (time_string);
 }
 
-FSTRING mstimstr(WFDB_Time t) {
+char *mstimstr(WFDB_Time t) {
   double f;
 
   if (ifreq > 0.)
@@ -3454,13 +3454,13 @@ FSTRING mstimstr(WFDB_Time t) {
   return fmstimstr(t, f);
 }
 
-FFREQUENCY getcfreq(void) { return (cfreq > 0. ? cfreq : ffreq); }
+WFDB_Frequency getcfreq() { return (cfreq > 0. ? cfreq : ffreq); }
 
-FVOID setcfreq(WFDB_Frequency freq) { cfreq = freq; }
+void setcfreq(WFDB_Frequency freq) { cfreq = freq; }
 
-FDOUBLE getbasecount(void) { return (bcount); }
+double getbasecount() { return (bcount); }
 
-FVOID setbasecount(double counter) { bcount = counter; }
+void setbasecount(double counter) { bcount = counter; }
 
 /* Convert string to sample number, using the given sampling
    frequency */
@@ -3515,7 +3515,7 @@ static WFDB_Time fstrtim(const char *string, WFDB_Frequency f) {
   }
 }
 
-FSITIME strtim(const char *string) {
+WFDB_Time strtim(const char *string) {
   double f;
 
   if (ifreq > 0.)
@@ -3535,7 +3535,7 @@ FSITIME strtim(const char *string) {
    based on similar functions in chapter 1 of "Numerical Recipes", by Press,
    Flannery, Teukolsky, and Vetterling (Cambridge U. Press, 1986). */
 
-FSTRING datstr(WFDB_Date date) {
+char *datstr(WFDB_Date date) {
   int d, m, y, gcorr, jm, jy;
   WFDB_Date jd;
 
@@ -3557,7 +3557,7 @@ FSTRING datstr(WFDB_Date date) {
   return (date_string);
 }
 
-FDATE strdat(const char *string) {
+WFDB_Date strdat(const char *string) {
   const char *mp, *yp;
   int d, m, y, gcorr, jm, jy;
   WFDB_Date date;
@@ -3588,7 +3588,7 @@ FDATE strdat(const char *string) {
   return (date);
 }
 
-FINT adumuv(WFDB_Signal s, WFDB_Sample a) {
+int adumuv(WFDB_Signal s, WFDB_Sample a) {
   double x;
   WFDB_Gain g = (s < nvsig) ? vsd[s]->info.gain : WFDB_DEFGAIN;
 
@@ -3600,7 +3600,7 @@ FINT adumuv(WFDB_Signal s, WFDB_Sample a) {
     return ((int)(x - 0.5));
 }
 
-FSAMPLE muvadu(WFDB_Signal s, int v) {
+WFDB_Sample muvadu(WFDB_Signal s, int v) {
   double x;
   WFDB_Gain g = (s < nvsig) ? vsd[s]->info.gain : WFDB_DEFGAIN;
 
@@ -3612,7 +3612,7 @@ FSAMPLE muvadu(WFDB_Signal s, int v) {
     return ((int)(x - 0.5));
 }
 
-FDOUBLE aduphys(WFDB_Signal s, WFDB_Sample a) {
+double aduphys(WFDB_Signal s, WFDB_Sample a) {
   double b;
   WFDB_Gain g;
 
@@ -3627,7 +3627,7 @@ FDOUBLE aduphys(WFDB_Signal s, WFDB_Sample a) {
   return ((a - b) / g);
 }
 
-FSAMPLE physadu(WFDB_Signal s, double v) {
+WFDB_Sample physadu(WFDB_Signal s, double v) {
   int b;
   WFDB_Gain g;
 
@@ -3657,7 +3657,7 @@ any order. */
 
 #define BUFLN 4096 /* must be a power of 2, see sample() */
 
-FSAMPLE sample(WFDB_Signal s, WFDB_Time t) {
+WFDB_Sample sample(WFDB_Signal s, WFDB_Time t) {
   static WFDB_Sample v;
   static WFDB_Time tt;
   int nsig = (nvsig > nisig) ? nvsig : nisig;
@@ -3714,7 +3714,7 @@ FSAMPLE sample(WFDB_Signal s, WFDB_Time t) {
   return (v);
 }
 
-FINT sample_valid() { return (sample_vflag); }
+int sample_valid() { return (sample_vflag); }
 
 /* Private functions (for use by other WFDB library functions only). */
 

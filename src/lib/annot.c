@@ -95,13 +95,13 @@ the time, num, and chan fields in that order.  Thus simultaneous annotations
 may be attached to the same signal provided that their num fields are unique.
 */
 
-#include "annot.h"
+#include "annot.hh"
 
 #include <limits.h>
 
 #include "ecgcodes.h"
 #include "ecgmap.h"
-#include "wfdblib.h"
+#include "wfdblib.hh"
 
 /* Annotation word format */
 #define CODE 0176000 /* annotation code segment of annotation word */
@@ -332,7 +332,7 @@ static int allocoann(unsigned n) {
 /* WFDB library functions (for general use). */
 
 /* annopen: open annotation files for the specified record */
-FINT annopen(char *record, const WFDB_Anninfo *aiarray, unsigned int nann) {
+int annopen(char *record, const WFDB_Anninfo *aiarray, unsigned int nann) {
   int a;
   unsigned int i, niafneeded, noafneeded;
 
@@ -448,7 +448,7 @@ FINT annopen(char *record, const WFDB_Anninfo *aiarray, unsigned int nann) {
 }
 
 /* getann: read an annotation from annotator n into *annot */
-FINT getann(WFDB_Annotator n, WFDB_Annotation *annot) {
+int getann(WFDB_Annotator n, WFDB_Annotation *annot) {
   int a, len;
   struct iadata *ia;
 
@@ -558,7 +558,7 @@ FINT getann(WFDB_Annotator n, WFDB_Annotation *annot) {
 }
 
 /* ungetann: push back an annotation into an input stream */
-FINT ungetann(WFDB_Annotator n, const WFDB_Annotation *annot) {
+int ungetann(WFDB_Annotator n, const WFDB_Annotation *annot) {
   if (n >= niaf || iad[n] == NULL) {
     wfdb_error("ungetann: annotator %d is not initialized\n", n);
     return (-2);
@@ -580,7 +580,7 @@ FINT ungetann(WFDB_Annotator n, const WFDB_Annotation *annot) {
 }
 
 /* putann: write annotation at annot to annotator n */
-FINT putann(WFDB_Annotator n, const WFDB_Annotation *annot) {
+int putann(WFDB_Annotator n, const WFDB_Annotation *annot) {
   unsigned annwd;
   const unsigned char *ap;
   int i, len;
@@ -697,7 +697,7 @@ FINT putann(WFDB_Annotator n, const WFDB_Annotation *annot) {
 
 /* iannsettime: seek so that for the next annotation read from each input
    annotator, anntime >= t */
-FINT iannsettime(WFDB_Time t) {
+int iannsettime(WFDB_Time t) {
   int stat = 0, niavalid = niaf;
   WFDB_Annotation tempann;
   WFDB_Annotator i;
@@ -776,7 +776,7 @@ static char *cstring[ACMAX + 1] = {
 };
 
 /* ecgstr: convert an anntyp value to a mnemonic string */
-FSTRING ecgstr(int code) {
+char *ecgstr(int code) {
   static char buf[14];
 
   if (0 <= code && code <= ACMAX)
@@ -788,7 +788,7 @@ FSTRING ecgstr(int code) {
 }
 
 /* strecg: convert a mnemonic string to an anntyp value */
-FINT strecg(const char *str) {
+int strecg(const char *str) {
   int code;
 
   if (str == NULL) str = "";
@@ -798,7 +798,7 @@ FINT strecg(const char *str) {
 }
 
 /* setecgstr: set the mnemonic string associated with the specified anntyp */
-FINT setecgstr(int code, const char *string) {
+int setecgstr(int code, const char *string) {
   if (NOTQRS <= code && code <= ACMAX) {
     if (string == NULL) string = "";
     cstring[code] = NULL; /* This statement (and the corresponding
@@ -827,7 +827,7 @@ static char *astring[ACMAX + 1] = {
     "[45]", "[46]", "[47]", "[48]", "[49]"  /* 45 - 49 */
 };
 
-FSTRING annstr(int code) {
+char *annstr(int code) {
   static char buf[14];
 
   if (0 <= code && code <= ACMAX)
@@ -838,7 +838,7 @@ FSTRING annstr(int code) {
   }
 }
 
-FINT strann(const char *str) {
+int strann(const char *str) {
   int code;
 
   if (str == NULL) str = "";
@@ -847,7 +847,7 @@ FINT strann(const char *str) {
   return (NOTQRS);
 }
 
-FINT setannstr(int code, const char *string) {
+int setannstr(int code, const char *string) {
   int mflag = 0;
 
   if (code > 0)
@@ -920,14 +920,14 @@ static char *tstring[ACMAX + 1] = {/* descriptive strings for each code */
                                    (char *)NULL,
                                    (char *)NULL};
 
-FSTRING anndesc(int code) {
+char *anndesc(int code) {
   if (0 <= code && code <= ACMAX)
     return (tstring[code]);
   else
     return ("illegal annotation code");
 }
 
-FINT setanndesc(int code, const char *string) {
+int setanndesc(int code, const char *string) {
   int mflag = 0;
 
   if (code > 0)
@@ -949,13 +949,13 @@ FINT setanndesc(int code, const char *string) {
 }
 
 /*  setafreq: set time resolution for output annotation files */
-FVOID setafreq(WFDB_Frequency f) { oafreq = f; }
+void setafreq(WFDB_Frequency f) { oafreq = f; }
 
 /* getafreq: return time resolution for output annotation files */
-FFREQUENCY getafreq(void) { return (oafreq); }
+WFDB_Frequency getafreq() { return (oafreq); }
 
 /* setiafreq: set time resolution for input annotations */
-FVOID setiafreq(WFDB_Annotator n, WFDB_Frequency f) {
+void setiafreq(WFDB_Annotator n, WFDB_Frequency f) {
   struct iadata *ia;
   WFDB_Frequency sfreq;
 
@@ -974,7 +974,7 @@ FVOID setiafreq(WFDB_Annotator n, WFDB_Frequency f) {
 }
 
 /* getiafreq: return time resolution for input annotations */
-FFREQUENCY getiafreq(WFDB_Annotator n) {
+WFDB_Frequency getiafreq(WFDB_Annotator n) {
   struct iadata *ia;
 
   if (n < niaf && (ia = iad[n]) != NULL) {
@@ -989,7 +989,7 @@ FFREQUENCY getiafreq(WFDB_Annotator n) {
 
 /* getiaorigfreq: return the original time resolution of an input
    annotation file */
-FFREQUENCY getiaorigfreq(WFDB_Annotator n) {
+WFDB_Frequency getiaorigfreq(WFDB_Annotator n) {
   struct iadata *ia;
 
   if (n < niaf && (ia = iad[n]) != NULL)
@@ -999,7 +999,7 @@ FFREQUENCY getiaorigfreq(WFDB_Annotator n) {
 }
 
 /* iannclose: close input annotation file n */
-FVOID iannclose(WFDB_Annotator n) {
+void iannclose(WFDB_Annotator n) {
   struct iadata *ia;
 
   if (n < niaf && (ia = iad[n]) != NULL && ia->file != NULL) {
@@ -1017,7 +1017,7 @@ FVOID iannclose(WFDB_Annotator n) {
 }
 
 /* oannclose: close output annotation file n */
-FVOID oannclose(WFDB_Annotator n) {
+void oannclose(WFDB_Annotator n) {
   int i, errflag;
   char *cmdbuf = NULL;
   struct oadata *oa;
@@ -1096,27 +1096,27 @@ FVOID oannclose(WFDB_Annotator n) {
    SWIG, which cannot wrap macros automatically.
 */
 
-FINT wfdb_isann(int code) { return (isann(code)); }
+int wfdb_isann(int code) { return (isann(code)); }
 
-FINT wfdb_isqrs(int code) { return (isqrs(code)); }
+int wfdb_isqrs(int code) { return (isqrs(code)); }
 
-FINT wfdb_setisqrs(int code, int newval) { return (setisqrs(code, newval)); }
+int wfdb_setisqrs(int code, int newval) { return (setisqrs(code, newval)); }
 
-FINT wfdb_map1(int code) { return (map1(code)); }
+int wfdb_map1(int code) { return (map1(code)); }
 
-FINT wfdb_setmap1(int code, int newval) { return (setmap1(code, newval)); }
+int wfdb_setmap1(int code, int newval) { return (setmap1(code, newval)); }
 
-FINT wfdb_map2(int code) { return (map2(code)); }
+int wfdb_map2(int code) { return (map2(code)); }
 
-FINT wfdb_setmap2(int code, int newval) { return (setmap2(code, newval)); }
+int wfdb_setmap2(int code, int newval) { return (setmap2(code, newval)); }
 
-FINT wfdb_ammap(int code) { return (ammap(code)); }
+int wfdb_ammap(int code) { return (ammap(code)); }
 
-FINT wfdb_mamap(int code, int subtype) { return (mamap(code, subtype)); }
+int wfdb_mamap(int code, int subtype) { return (mamap(code, subtype)); }
 
-FINT wfdb_annpos(int code) { return (annpos(code)); }
+int wfdb_annpos(int code) { return (annpos(code)); }
 
-FINT wfdb_setannpos(int code, int newval) { return (setannpos(code, newval)); }
+int wfdb_setannpos(int code, int newval) { return (setannpos(code, newval)); }
 
 /* Private functions (for the use of other WFDB library functions only). */
 
