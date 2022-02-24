@@ -7,6 +7,8 @@ to share information about library private functions, which are not intended
 to be invoked directly by user programs.  By convention, all externally defined
 symbols reserved to the library begin with the characters "wfdb_".
 */
+#ifndef WFDB_LIB_IO_H_
+#define WFDB_LIB_IO_H_
 
 #include <sys/stat.h>
 #ifndef FILE
@@ -195,3 +197,9 @@ int wfdb_putc(int c, WFDB_FILE *fp);
 int wfdb_fclose(WFDB_FILE *fp);
 // Emulates fopen, but returns a WFDB_FILE pointer
 WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
+
+char *wfdberror();
+__attribute__((__format__(__printf__, 1, 2)))
+void wfdb_error(const char *format_string, ...);
+
+#endif  // WFDB_LIB_IO_H_
