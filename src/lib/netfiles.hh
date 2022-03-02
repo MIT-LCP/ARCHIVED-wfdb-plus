@@ -24,18 +24,14 @@ struct Netfile {
 };
 
 struct Chunk {
-  long size, buffer_size;
-  unsigned long start_pos, end_pos, total_size;
+  long size;
+  long buffer_size;
+  unsigned long start_pos;
+  unsigned long end_pos;
+  unsigned long total_size;
   char *data;
   char *url;
 };
-
-// Constants/Config
-
-/* cache redirections for 5 minutes */
-#define REDIRECT_CACHE_TIME (5 * 60)
-
-#define NF_PAGE_SIZE 32768 /* default bytes per http range request */
 
 #ifndef EROFS /* errno value: attempt to write to a read-only file system */
 #ifdef EINVAL

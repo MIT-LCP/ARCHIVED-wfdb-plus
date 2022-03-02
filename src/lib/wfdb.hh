@@ -1,4 +1,4 @@
-/* file: wfdb.h		G. Moody	13 June 1983
+/* file: wfdb.hh		G. Moody	13 June 1983
 
 WFDB library type, constant, structure, and function interface definitions
 
