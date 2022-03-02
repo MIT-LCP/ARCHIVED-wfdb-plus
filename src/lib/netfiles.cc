@@ -1,23 +1,32 @@
 #include "netfiles.hh"
 
 #include <absl/strings/str_format.h>
+#include <absl/strings/str_split.h>
 #include <errno.h>
 #include <stdlib.h>
 
+#include <map>
 #include <string>
+#include <tuple>
 
 #include "wfdb.hh"
 
+// Constants/Config
+constexpr int kRedirectCacheTime =
+    5 * 60;                         /* cache redirections for 5 minutes */
+constexpr long kNfPageSize = 32768; /* default bytes per http range request */
+
 // State tracking
-static int nf_open_files = 0;         /* number of open netfiles */
-static long page_size = NF_PAGE_SIZE; /* bytes per range request (0: disable
+static int nf_open_files = 0;        /* number of open netfiles */
+static long page_size = kNfPageSize; /* bytes per range request (0: disable
                                          range requests) */
-static int www_done_init = 0;         /* TRUE once libcurl is initialized */
+static int www_done_init = 0;        /* TRUE once libcurl is initialized */
 
 static CURL *curl_ua = NULL;
 static char curl_error_buf[CURL_ERROR_SIZE];
 
-static char **passwords;
+// Key: domain. Value: <username, password>
+static std::map<std::string, std::pair<std::string, std::string>> passwords;
 
 int nf_vfprintf(Netfile *nf, const char *format, va_list ap) {
   /* no support yet for writing to remote files */
@@ -45,13 +54,7 @@ int curl_try(CURLcode err) {
 
 /* Get the current time, as an unsigned number of seconds since some
    arbitrary starting point. */
-unsigned int www_time() {
-#ifdef HAVE_CLOCK_GETTIME
-  struct timespec ts;
-  if (!clock_gettime(CLOCK_MONOTONIC, &ts)) return ((unsigned int)ts.tv_sec);
-#endif
-  return ((unsigned int)time(NULL));
-}
+unsigned int www_time() { return ((unsigned int)time(NULL)); }
 
 /* This is a dummy write callback, for when we don't care about the
    data curl is receiving. */
@@ -59,41 +62,40 @@ size_t curl_null_write(void *ptr, size_t size, size_t nmemb, void *stream) {
   return (size * nmemb);
 }
 
-/* www_parse_passwords parses the WFDBPASSWORD environment variable.
-This environment variable contains a list of URL prefixes and
-corresponding usernames/passwords.  Alternatively, the environment
-variable may contain '@' followed by the name of a file containing
-password information.
+/* Sets the `passwords` global variable by parsing the input password string.
+
+This password string, likely read from the WFDBPASSWORD environment variable,
+should contain a list of URL prefixes and corresponding usernames/passwords.
+
+Alternatively, it may contain '@' followed by the name of
+a file containing password information.
 
 Each item in the list consists of a URL prefix, followed by a space,
-then the username and password separated by a colon.  For example,
-setting WFDBPASSWORD to "https://example.org john:letmein" would use
+then the username and password separated by a colon.
+
+For example, passing in "https://example.org john:letmein" would use
 the username "john" and the password "letmein" for all HTTPS requests
 to example.org.
 
 If there are multiple items in the list, they must be separated by
 end-of-line or tab characters. */
-void www_parse_passwords(const char *str) {
-  static char sep[] = "\t\n\r";
-  char *xstr = NULL, *p, *q;
-  int n;
-
-  SSTRCPY(xstr, str);
-  wfdb_getiwfdb(&xstr);
-  if (!xstr) return;
-
-  SALLOC(passwords, 1, sizeof(char *));
-  n = 0;
-  for (p = strtok(xstr, sep); p; p = strtok(NULL, sep)) {
-    if (!(q = strchr(p, ' ')) || !strchr(q, ':')) continue;
-    SREALLOC(passwords, n + 2, sizeof(char *));
-    if (!passwords) return;
-    SSTRCPY(passwords[n], p);
-    n++;
+void www_parse_passwords(std::string_view password_str) {
+  for (absl::string_view domain_entry :
+       absl::StrSplit(password_str, absl::ByAnyChar("\t\n\r"))) {
+    std::vector<absl::string_view> domain_user_pass =
+        absl::StrSplit(domain_entry, " ");
+    if (domain_user_pass.size() != 2) {
+      continue;
+    }
+    std::vector<absl::string_view> user_pass =
+        absl::StrSplit(domain_user_pass[1], ":");
+    if (user_pass.size() != 2) {
+      continue;
+    }
+    passwords.insert(
+        std::pair<std::string, std::pair<std::string, std::string>>(
+            domain_user_pass[0], std::make_pair(user_pass[0], user_pass[1])));
   }
-  passwords[n] = NULL;
-
-  SFREE(xstr);
 }
 
 /* www_userpwd determines which username/password should be used for a
@@ -114,11 +116,11 @@ const char *www_userpwd(const char *url) {
       return &passwords[i][n + 1];
     }
   }
-
   return NULL;
 }
 
 /* Create a new, empty chunk. */
+// TODO: Replace with class
 Chunk *curl_chunk_new(long len) {
   Chunk *c;
 
@@ -197,7 +199,7 @@ Chunk *nf_get_url_range_chunk(Netfile *nf, long startb, long len) {
      URL.  (If the system clock moves backwards, the cache is
      assumed to be out-of-date.) */
   request_time = www_time();
-  if (request_time - nf->redirect_time > REDIRECT_CACHE_TIME) {
+  if (request_time - nf->redirect_time > kRedirectCacheTime) {
     SFREE(nf->redirect_url);
   }
   url = (nf->redirect_url ? nf->redirect_url : nf->url);
@@ -481,14 +483,12 @@ int nf_putc(int c, Netfile *nf) {
 void wfdb_wwwquit() {
   int i;
   if (www_done_init) {
-#ifndef _WINDOWS
     curl_easy_cleanup(curl_ua);
-    curl_ua = NULL;
+    curl_ua = nullptr;
     curl_global_cleanup();
-#endif
+
     www_done_init = 0;
-    for (i = 0; passwords && passwords[i]; i++) SFREE(passwords[i]);
-    SFREE(passwords);
+    passwords.clear();
   }
 }
 
@@ -505,12 +505,11 @@ void www_init() {
     curl_easy_setopt(curl_ua, CURLOPT_ERRORBUFFER, curl_error_buf);
     /* String to send as a User-Agent header */
     curl_easy_setopt(curl_ua, CURLOPT_USERAGENT, curl_get_ua_string());
-#ifdef USE_NETRC
-    /* Search $HOME/.netrc for passwords */
-    curl_easy_setopt(curl_ua, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
-#endif
+
     /* Get password information from the environment if available */
-    if ((p = getenv("WFDBPASSWORD")) && *p) www_parse_passwords(p);
+    if ((p = getenv("WFDBPASSWORD")) && *p) {
+      www_parse_passwords(p);
+    }
 
     /* Get the name of the CA bundle file */
     if ((p = getenv("CURL_CA_BUNDLE")) && *p)

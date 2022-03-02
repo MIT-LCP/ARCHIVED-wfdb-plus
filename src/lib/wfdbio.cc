@@ -19,6 +19,7 @@ is obtained from the shell (environment) variable WFDB, which may be set by the
 user (typically as part of the login script).  A default value may be set at
 compile time (DEFWFDB in wfdblib.h); this is necessary for environments that do
 not support the concept of environment variables, such as MacOS9 and earlier.
+
 If WFDB or DEFWFDB is of the form '@FILE', getwfdb reads the WFDB path from the
 specified (local) FILE (using wfdb_getiwfdb); such files may be nested up to
 10 levels. */
@@ -58,15 +59,7 @@ void setwfdb(const char *p) {
   wfdb_parse_path(p);
 }
 
-/* wfdbquiet can be used to suppress error messages from the WFDB library. */
 
-static int error_print = 1;
-
-void wfdbquiet() { error_print = 0; }
-
-/* wfdbverbose enables error messages from the WFDB library. */
-
-void wfdbverbose() { error_print = 1; }
 
 static char *wfdb_filename;
 
@@ -176,6 +169,7 @@ struct WfdbPathComponent {
   WfdbPathComponent *next, *prev;
   int type; /* WFDB_LOCAL or WFDB_NET */
 };
+
 static WfdbPathComponent *wfdb_path_list;
 
 /* wfdb_free_path_list clears out the path list, freeing all memory allocated
@@ -331,7 +325,7 @@ through last characters of its input argument.  If that value begins with '@',
 this procedure is repeated, with nesting up to ten levels.
 
 Note that the input file must be local (it is accessed using the standard C I/O
-functions rather than their wfdb_* counterparts).  This limitation is
+functions rather than their wfdb_* counterparts). This limitation is
 intentional, since the alternative (to allow remote files to determine the
 contents of the WFDB path) seems an unnecessary security risk. */
 
@@ -529,68 +523,6 @@ void wfdb_addtopath(const char *s) {
 #endif
 #endif
 
-/* wfdb_vasprintf formats a string in the same manner as vsprintf, and
-allocates a new buffer that is sufficiently large to hold the result.
-The original buffer, if any, is freed afterwards (meaning that, unlike
-vsprintf, it is permissible to use the original buffer as a '%s'
-argument.) */
-int wfdb_vasprintf(char **buffer, const char *format, va_list arguments) {
-  char *oldbuffer;
-  int length, bufsize;
-  va_list arguments2;
-
-  /* make an initial guess at how large the buffer should be */
-  bufsize = 2 * strlen(format) + 1;
-
-  oldbuffer = *buffer;
-  *buffer = NULL;
-
-  while (1) {
-    /* do not use SALLOC; avoid recursive calls to wfdb_error */
-    if (*buffer) free(*buffer);
-    *buffer = malloc(bufsize);
-    if (!(*buffer)) {
-      if (wfdb_me_fatal()) {
-        fprintf(stderr, "WFDB: out of memory\n");
-        exit(1);
-      }
-      length = 0;
-      break;
-    }
-
-    VA_COPY(arguments2, arguments);
-    length = vsnprintf(*buffer, bufsize, format, arguments2);
-    VA_END2(arguments2);
-
-    /* some pre-standard versions of 'vsnprintf' return -1 if the
-       formatted string does not fit in the buffer; in that case,
-       try again with a larger buffer */
-    if (length < 0) bufsize *= 2;
-    /* standard 'vsnprintf' returns the actual length of the
-       formatted string */
-    else if (length >= bufsize)
-      bufsize = length + 1;
-    else
-      break;
-  }
-
-  if (oldbuffer) free(oldbuffer);
-  return (length);
-}
-
-/* wfdb_asprintf formats a string in the same manner as sprintf, and
-allocates a new buffer that is sufficiently large to hold the
-result. */
-int wfdb_asprintf(char **buffer, const char *format, ...) {
-  va_list arguments;
-  int length;
-
-  va_start(arguments, format);
-  length = wfdb_vasprintf(buffer, format, arguments);
-  va_end(arguments);
-
-  return (length);
-}
 
 /* The wfdb_fprintf function handles all formatted output to files.  It is
 used in the same way as the standard fprintf function, except that its first
