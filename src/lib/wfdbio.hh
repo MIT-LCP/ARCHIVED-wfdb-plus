@@ -15,6 +15,8 @@ symbols reserved to the library begin with the characters "wfdb_".
 #include <stdio.h>
 #endif
 
+#include <string>
+
 #include "netfiles.hh"
 #include "wfdb.hh"
 
@@ -33,9 +35,10 @@ symbols reserved to the library begin with the characters "wfdb_".
 */
 
 #ifndef WFDB_NETFILES
-#define DEFWFDB ". DBDIR"
+inline constexpr char kDefaultWfdbPath[] = ". DBDIR";
 #else
-#define DEFWFDB ". DBDIR http://physionet.org/physiobank/database"
+inline constexpr char kDefaultWfdbPath[] =
+    ". DBDIR http://physionet.org/physiobank/database";
 #endif
 
 /* DEFWFDBCAL is the name of the default WFDB calibration file, used if the
@@ -69,26 +72,33 @@ symbols reserved to the library begin with the characters "wfdb_".
 #define DEFWFDBGVMODE WFDB_LOWRES
 
 /* Structures used by internal WFDB library functions only */
+enum class FileType { kLocal, kNet };
+
 struct WFDB_FILE {
   FILE *fp;
-  Netfile *netfp;
-  int type;  // TODO: Replace with enum
+  struct Netfile *netfp;
+  FileType type;
 };
 
 /* Values for WFDB_FILE 'type' field */
 #define WFDB_LOCAL 0 /* a local file, read via C standard I/O */
 #define WFDB_NET 1   /* a remote file, read via libwww */
 
+// An element of the WFDB Path, specifying where to search for database files
+struct WfdbPathComponent {
+  std::string prefix;
+  FileType type;
+};
 
-// Returns the database path string
-char* getwfdb();
-// sets the database path string
+// Returns the database path string. Initializes it if not already set.
+const std::string &getwfdb();
+// Sets the database path string
 void setwfdb(const char *database_path_string);
-// restores the database path to its initial value
+// Restores the database path to its initial value
 void resetwfdb();
 
 // Returns the complete pathname of a WFDB file
-char* wfdbfile(const char *file_type, char *record);
+char *wfdbfile(const char *file_type, char *record);
 // Set behavior on memory errors
 void wfdbmemerr(int behavior);
 // Indicates if memory errors are fatal
@@ -96,15 +106,15 @@ int wfdb_me_fatal();
 
 // These functions expose config strings needed by the WFDB Toolkit for Matlab:
 // Return the string defined by VERSION
-const char* wfdbversion();
+const char *wfdbversion();
 // Return the string defined by LDFLAGS
-const char* wfdbldflags();
+const char *wfdbldflags();
 // Return the string defined by CFLAGS
-const char* wfdbcflags();
+const char *wfdbcflags();
 // Return the string defined by DEFWFDB
-const char* wfdbdefwfdb();
+const char *wfdbdefwfdb();
 // return the string defined by DEFWFDBCAL
-const char* wfdbdefwfdbcal();
+const char *wfdbdefwfdbcal();
 
 // Reads a 16-bit integer
 int wfdb_g16(WFDB_FILE *fp);
@@ -118,10 +128,8 @@ void wfdb_p32(long x, WFDB_FILE *fp);
 // Puts the WFDB path, etc. into the environment
 void wfdb_export_config();
 
-
 // Finds and opens database files
-WFDB_FILE *wfdb_open(const char *file_type, const char *record,
-                            int mode);
+WFDB_FILE *wfdb_open(const char *file_type, const char *record, int mode);
 // Checks record and annotator names for validity
 int wfdb_checkname(const char *name, const char *description);
 // Removes trailing '.hea' from a record name, if present
@@ -129,8 +137,8 @@ void wfdb_striphea(char *record);
 
 // Frees data structures assigned to the path list
 void wfdb_free_path_list();
-// Splits WFDB path into components
-int wfdb_parse_path(const char *wfdb_path);
+// Parses the path string and sets the path components
+void wfdb_parse_path(std::string_view path_string);
 
 // Sets WFDB from the contents of a file
 static const char *wfdb_getiwfdb(char **p);
@@ -145,8 +153,6 @@ int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);
 void wfdb_setirec(const char *record_name);
 // Gets current record name
 char *wfdb_getirec();
-
-
 
 /* These functions are compiled only if WFDB_NETFILES is non-zero; they permit
 access to remote files via http or ftp (using libcurl) as
@@ -175,8 +181,7 @@ int wfdb_fseek(WFDB_FILE *fp, long offset, int whence);
 // Emulates ftell
 long wfdb_ftell(WFDB_FILE *fp);
 // Emulates fwrite, for local files only
-size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb,
-                          WFDB_FILE *fp);
+size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb, WFDB_FILE *fp);
 // Emulates getc
 int wfdb_getc(WFDB_FILE *fp);
 // Emulates putc, for local files only
@@ -186,8 +191,7 @@ int wfdb_fclose(WFDB_FILE *fp);
 // Emulates fopen, but returns a WFDB_FILE pointer
 WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
 
-char *wfdberror();
-__attribute__((__format__(__printf__, 1, 2)))
-void wfdb_error(const char *format_string, ...);
+__attribute__((__format__(__printf__, 1, 2))) void wfdb_error(
+    const char *format_string, ...);
 
 #endif  // WFDB_LIB_IO_H_

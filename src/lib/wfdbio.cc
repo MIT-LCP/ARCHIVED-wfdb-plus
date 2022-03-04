@@ -4,68 +4,64 @@ Low-level I/O functions for the WFDB library
 
 */
 
+#include "wfdbio.hh"
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include "wfdb.hh"
-#include "wfdbio.hh"
+#include <vector>
 
-/* WFDB library functions */
+#include "wfdb.hh"
+
+/* Global configuration variables */
+
+static std::string wfdb_path;  // Space delimited entries
+static std::vector<WfdbPathComponent>
+    wfdb_path_list;  // TODO: figure out if both of these are needed
+static char *wfdb_filename;
 
 /* getwfdb is used to obtain the WFDB path, a list of places in which to search
 for database files to be opened for reading.  In most environments, this list
 is obtained from the shell (environment) variable WFDB, which may be set by the
-user (typically as part of the login script).  A default value may be set at
-compile time (DEFWFDB in wfdblib.h); this is necessary for environments that do
-not support the concept of environment variables, such as MacOS9 and earlier.
+user.  A default value may be set at compile time (DEFWFDB in wfdblib.h).
 
 If WFDB or DEFWFDB is of the form '@FILE', getwfdb reads the WFDB path from the
-specified (local) FILE (using wfdb_getiwfdb); such files may be nested up to
+specified (local) file (using wfdb_getiwfdb); such files may be nested up to
 10 levels. */
 
-static char *wfdbpath = NULL, *wfdbpath_init = NULL;
+const std::string &getwfdb() {
+  if (wfdb_path.empty()) {
+
+    // TODO: Remove this initialization from this function?
+    const char *p = getenv("WFDB");
+
+    if (p == nullptr) {
+      wfdb_path = kDefaultWfdbPath;
+    }
+
+    p = wfdb_getiwfdb(wfdb_path);
+
+    wfdb_parse_path(p);
+  }
+  return wfdb_path;
+}
 
 /* resetwfdb is called by wfdbquit, and can be called within an application,
 to restore the WFDB path to the value that was returned by the first call
 to getwfdb (or NULL if getwfdb was not called). */
 
-void resetwfdb() { SSTRCPY(wfdbpath, wfdbpath_init); }
+void resetwfdb() { wfdb_path = kDefaultWfdbPath; }
 
-char* getwfdb() {
-  if (wfdbpath == NULL) {
-    const char *p = getenv("WFDB");
-
-    if (p == NULL) p = DEFWFDB;
-    SSTRCPY(wfdbpath, p);
-    p = wfdb_getiwfdb(&wfdbpath);
-    SSTRCPY(wfdbpath_init, wfdbpath);
-    wfdb_parse_path(p);
-  }
-  return (wfdbpath);
+/* Changes the WFDB path. */
+void setwfdb(std::string_view path) {
+  wfdb_path = path;
+  wfdb_parse_path(path);
 }
-
-/* setwfdb can be called within an application to change the WFDB path. */
-
-void setwfdb(const char *p) {
-  wfdb_export_config();
-
-  if (p == NULL && (p = getenv("WFDB")) == NULL) p = DEFWFDB;
-  SSTRCPY(wfdbpath, p);
-  wfdb_export_config();
-
-  SSTRCPY(wfdbpath, p);
-  p = wfdb_getiwfdb(&wfdbpath);
-  wfdb_parse_path(p);
-}
-
-
-
-static char *wfdb_filename;
 
 /* wfdbfile returns the pathname or URL of a WFDB file. */
 
-char* wfdbfile(const char *s, char *record) {
+char *wfdbfile(const char *s, char *record) {
   WFDB_FILE *ifile;
 
   if (s == NULL && record == NULL) return (wfdb_filename);
@@ -79,6 +75,10 @@ char* wfdbfile(const char *s, char *record) {
   } else
     return (NULL);
 }
+
+/* wfdb_free_path_list clears out the path list, freeing all memory allocated
+   to it. */
+void wfdb_free_path_list() { wfdb_path_list.clear(); }
 
 /* Determine how the WFDB library handles memory allocation errors (running
 out of memory).  Call wfdbmemerr(0) in order to have these errors returned
@@ -103,15 +103,15 @@ void wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
 #define CFLAGS "CFLAGS not defined"
 #endif
 
-const char* wfdbversion() { return VERSION; }
+const char *wfdbversion() { return VERSION; }
 
-const char* wfdbldflags(void) { return LDFLAGS; }
+const char *wfdbldflags() { return LDFLAGS; }
 
-const char* wfdbcflags(void) { return CFLAGS; }
+const char *wfdbcflags() { return CFLAGS; }
 
-const char* wfdbdefwfdb(void) { return DEFWFDB; }
+const char *wfdbdefwfdb() { return kDefaultWfdbPath; }
 
-const char* wfdbdefwfdbcal(void) { return DEFWFDBCAL; }
+const char *wfdbdefwfdbcal() { return DEFWFDBCAL; }
 
 /* Private functions (for the use of other WFDB library functions only). */
 
@@ -162,28 +162,6 @@ void wfdb_p16(unsigned int x, WFDB_FILE *fp) {
 void wfdb_p32(long x, WFDB_FILE *fp) {
   wfdb_p16((unsigned int)(x >> 16), fp);
   wfdb_p16((unsigned int)x, fp);
-}
-
-struct WfdbPathComponent {
-  char *prefix;
-  WfdbPathComponent *next, *prev;
-  int type; /* WFDB_LOCAL or WFDB_NET */
-};
-
-static WfdbPathComponent *wfdb_path_list;
-
-/* wfdb_free_path_list clears out the path list, freeing all memory allocated
-   to it. */
-void wfdb_free_path_list() {
-  WfdbPathComponent *c0 = NULL, *c1 = wfdb_path_list;
-
-  while (c1) {
-    c0 = c1->next;
-    SFREE(c1->prefix);
-    SFREE(c1);
-    c1 = c0;
-  }
-  wfdb_path_list = NULL;
 }
 
 /* Operating system and compiler dependent code
@@ -250,21 +228,21 @@ OS- and compiler-dependent definitions:
 /* wfdb_parse_path constructs a linked list of path components by splitting
 its string input (usually the value of WFDB). */
 
-int wfdb_parse_path(const char *p) {
+void wfdb_parse_path(std::string_view path_string) {
   const char *q;
   int current_type, slashes, found_end;
   WfdbPathComponent *c0 = NULL, *c1 = wfdb_path_list;
   static int first_call = 1;
 
   /* First, free the existing wfdb_path_list, if any. */
-  wfdb_free_path_list();
+  wfdb_path_list.clear();
 
   /* Do nothing else if no path string was supplied. */
   if (p == NULL) return (0);
 
   /* Register the cleanup function so that it is invoked on exit. */
   if (first_call) {
-    atexit(wfdb_free_path_list);
+    atexit(wfdb_path_list.clear);
     first_call = 0;
   }
   q = p;
@@ -320,12 +298,11 @@ int wfdb_parse_path(const char *p) {
   return (0);
 }
 
-/* wfdb_getiwfdb reads a new value for WFDB from the file named by the second
-through last characters of its input argument.  If that value begins with '@',
+/* Reads a new value for WFDB from the file named by the second
+through last characters of its input argument. If that value begins with '@',
 this procedure is repeated, with nesting up to ten levels.
 
-Note that the input file must be local (it is accessed using the standard C I/O
-functions rather than their wfdb_* counterparts). This limitation is
+Note that the input file must be local. This limitation is
 intentional, since the alternative (to allow remote files to determine the
 contents of the WFDB path) seems an unnecessary security risk. */
 
@@ -371,6 +348,7 @@ static char *p_wfdb, *p_wfdbcal, *p_wfdbannsort, *p_wfdbgvmode;
    It must not be invoked at any other time, since pointers passed to
    putenv must be maintained by the caller, according to POSIX.1-2001
    semantics for putenv.  */
+// TODO: Replace env var usage?
 void wfdb_free_config() {
   static char n_wfdb[] = "WFDB=";
   static char n_wfdbcal[] = "WFDBCAL=";
@@ -384,13 +362,13 @@ void wfdb_free_config() {
   SFREE(p_wfdbcal);
   SFREE(p_wfdbannsort);
   SFREE(p_wfdbgvmode);
-  SFREE(wfdbpath);
-  SFREE(wfdbpath_init);
+  // SFREE(wfdbpath);
   SFREE(wfdb_filename);
 }
 
 /* wfdb_export_config is invoked from setwfdb to place the configuration
    variables into the environment if possible. */
+// TODO: Replace env var usage?
 void wfdb_export_config() {
   static int first_call = 1;
   char *envstr = NULL;
@@ -522,7 +500,6 @@ void wfdb_addtopath(const char *s) {
 #define VA_END2(ap) (void)(ap)
 #endif
 #endif
-
 
 /* The wfdb_fprintf function handles all formatted output to files.  It is
 used in the same way as the standard fprintf function, except that its first
