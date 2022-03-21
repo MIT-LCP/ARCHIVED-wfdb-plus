@@ -55,8 +55,8 @@ implemented;  for this reason, several of the functions listed below are
 stubs (placeholders) only, as noted.
 */
 
-/* These functions, defined here if WFDB_NETFILES is non-zero, are intended only
-for the use of the functions in the next group below */
+/* These functions, defined here if FileType::kNetFILES is non-zero, are
+intended only for the use of the functions in the next group below */
 
 // Load username/password information
 void www_parse_passwords(const char *str);

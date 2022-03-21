@@ -522,8 +522,8 @@ void www_init() {
     curl_easy_setopt(curl_ua, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl_ua, CURLOPT_MAXREDIRS, 5L);
 
-    /* Show details of URL requests if WFDB_NET_DEBUG is set */
-    if ((p = getenv("WFDB_NET_DEBUG")) && *p)
+    /* Show details of URL requests if FileType::kNet_DEBUG is set */
+    if ((p = getenv("FileType::kNet_DEBUG")) && *p)
       curl_easy_setopt(curl_ua, CURLOPT_VERBOSE, 1L);
 
     atexit(wfdb_wwwquit);
