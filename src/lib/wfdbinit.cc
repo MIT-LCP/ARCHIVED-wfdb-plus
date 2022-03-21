@@ -32,7 +32,7 @@ This file contains definitions of the following WFDB library functions:
 
 #include "annot.hh"
 #include "signal.hh"
-#include "wfdblib.hh"
+#include "wfdbio.hh"
 
 int wfdbinit(char *record, const WFDB_Anninfo *aiarray, unsigned int nann,
              WFDB_Siginfo *siarray, unsigned int nsig) {

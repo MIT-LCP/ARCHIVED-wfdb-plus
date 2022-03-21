@@ -16,48 +16,58 @@ Low-level I/O functions for the WFDB library
 
 /* Global configuration variables */
 
-static std::string wfdb_path;  // Space delimited entries
-static std::vector<WfdbPathComponent>
-    wfdb_path_list;  // TODO: figure out if both of these are needed
-static char *wfdb_filename;
+struct WfdbRuntimeConfig {
+  std::string wfdb_path;
+  std::vector<WfdbPathComponent>
+      wfdb_path_list;  // TODO: figure out if both of these are needed
+  std::string wfdb_cal;
+  bool ann_sort;
+  GetVecMode get_vec_mode;
+  std::string wfdb_filename;
+};
+
+static WfdbRuntimeConfig wfdb_runtime_config;
+
+// static std::string wfdb_path;  // Space delimited entries
+// static std::vector<WfdbPathComponent>
+//     wfdb_path_list;  // TODO: figure out if both of these are needed
+// static char *wfdb_filename;
 
 /* getwfdb is used to obtain the WFDB path, a list of places in which to search
 for database files to be opened for reading.  In most environments, this list
 is obtained from the shell (environment) variable WFDB, which may be set by the
 user.  A default value may be set at compile time (DEFWFDB in wfdblib.h).
+ */
 
-If WFDB or DEFWFDB is of the form '@FILE', getwfdb reads the WFDB path from the
-specified (local) file (using wfdb_getiwfdb); such files may be nested up to
-10 levels. */
+const std::string &getwfdb() { return wfdb_runtime_config.wfdb_path; }
 
-const std::string &getwfdb() {
-  if (wfdb_path.empty()) {
+/* resetwfdb is called by wfdbquit, and can be called within an application,
+to restore the WFDB path to the value that was returned by the first call
+to getwfdb (or NULL if getwfdb was not called). */
 
-    // TODO: Remove this initialization from this function?
+void resetwfdb() {
+  wfdb_runtime_config.wfdb_path = kDefaultWfdbConfig.wfdb_path;
+}
+
+/* Changes the WFDB path. */
+void setwfdb(std::string_view path) {
+  wfdb_runtime_config.wfdb_path = path;
+  wfdb_parse_path(path);
+}
+
+void init_wfdb_path() {
+  if (wfdb_runtime_config.wfdb_path.empty()) {
     const char *p = getenv("WFDB");
 
     if (p == nullptr) {
-      wfdb_path = kDefaultWfdbPath;
+      resetwfdb();
     }
 
     p = wfdb_getiwfdb(wfdb_path);
 
     wfdb_parse_path(p);
   }
-  return wfdb_path;
-}
-
-/* resetwfdb is called by wfdbquit, and can be called within an application,
-to restore the WFDB path to the value that was returned by the first call
-to getwfdb (or NULL if getwfdb was not called). */
-
-void resetwfdb() { wfdb_path = kDefaultWfdbPath; }
-
-/* Changes the WFDB path. */
-void setwfdb(std::string_view path) {
-  wfdb_path = path;
-  wfdb_parse_path(path);
-}
+};
 
 /* wfdbfile returns the pathname or URL of a WFDB file. */
 
@@ -109,9 +119,9 @@ const char *wfdbldflags() { return LDFLAGS; }
 
 const char *wfdbcflags() { return CFLAGS; }
 
-const char *wfdbdefwfdb() { return kDefaultWfdbPath; }
+const char *wfdbdefwfdb() { return kDefaultWfdbConfig.wfdb_path; }
 
-const char *wfdbdefwfdbcal() { return DEFWFDBCAL; }
+const char *wfdbdefwfdbcal() { return kDefaultWfdbConfig.wfdb_cal; }
 
 /* Private functions (for the use of other WFDB library functions only). */
 
@@ -252,7 +262,7 @@ void wfdb_parse_path(std::string_view path_string) {
     /* Find the beginning of the next component (skip whitespace). */
     while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r') q++;
     p = q--;
-    current_type = WFDB_LOCAL;
+    current_type = FileType::kLocal;
     /* Find the end of the current component. */
     found_end = 0;
     slashes = 0;
@@ -261,11 +271,11 @@ void wfdb_parse_path(std::string_view path_string) {
         case ':': /* might be a component delimiter, part of '://',
                      a drive suffix (MS-DOS), or a directory separator
                      (Mac) */
-          if (*(q + 1) == '/' && *(q + 2) == '/') current_type = WFDB_NET;
+          if (*(q + 1) == '/' && *(q + 2) == '/') current_type = FileType::kNet;
           /* Allow colons within the authority portion of the URL.
              For example, "http://[::1]:8080/database:/usr/database"
              is a database path with two components. */
-          else if (current_type != WFDB_NET || slashes > 2)
+          else if (current_type != FileType::kNet || slashes > 2)
             found_end = 1;
           break;
         case ';': /* definitely a component delimiter */
@@ -469,9 +479,9 @@ void wfdb_addtopath(const char *s) {
     SALLOC(c1->prefix, p - s + 1, sizeof(char));
     memcpy(c1->prefix, s, p - s);
     if (strstr(c1->prefix, "://"))
-      c1->type = WFDB_NET;
+      c1->type = FileType::kNet;
     else
-      c1->type = WFDB_LOCAL;
+      c1->type = FileType::kLocal;
   }
   /* (Re)link the unlinked node. */
   if (strcmp(c0->prefix, ".") == 0) { /* skip initial "." if present */
@@ -510,8 +520,8 @@ int wfdb_fprintf(WFDB_FILE *wp, const char *format, ...) {
   va_list args;
 
   va_start(args, format);
-#if WFDB_NETFILES
-  if (wp->type == WFDB_NET)
+#if FileType::kNetFILES
+  if (wp->type == FileType::kNet)
     ret = nf_vfprintf(wp->netfp, format, args);
   else
 #endif
@@ -618,13 +628,13 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
     if (mode == WFDB_READ) {
       static WFDB_FILE wfdb_stdin;
 
-      wfdb_stdin.type = WFDB_LOCAL;
+      wfdb_stdin.type = FileType::kLocal;
       wfdb_stdin.fp = stdin;
       return (&wfdb_stdin);
     } else {
       static WFDB_FILE wfdb_stdout;
 
-      wfdb_stdout.type = WFDB_LOCAL;
+      wfdb_stdout.type = FileType::kLocal;
       wfdb_stdout.fp = stdout;
       return (&wfdb_stdout);
     }
@@ -731,7 +741,7 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
     }
     if (!buf) continue;
     if (len > 0) {
-      if (c0->type == WFDB_NET) {
+      if (c0->type == FileType::kNet) {
         if (buf[len - 1] != '/') buf[len++] = '/';
       } else if (buf[len - 1] != DSEP)
         buf[len++] = DSEP;
@@ -825,15 +835,15 @@ any accessible World Wide Web (HTTP) or FTP server.  (Writing files to a remote
 WWW or FTP server may be supported in the future.)
 
 If you do not wish to allow access to remote files, or if libcurl is not
-available, simply define the symbol WFDB_NETFILES as 0 when compiling the WFDB
-library.  If the symbol WFDB_NETFILES is zero, wfdblib.h defines wfdb_fread as
-fread, wfdb_fwrite as fwrite, etc.;  thus in this case, the I/O is performed
-using the standard C I/O functions, and the function definitions in the next
-section are not compiled.  This behavior exactly mimics that of versions of the
-WFDB library earlier than version 10.0.1 (which did not support remote file
-access), with no additional run-time overhead.
+available, simply define the symbol FileType::kNetFILES as 0 when compiling the
+WFDB library.  If the symbol FileType::kNetFILES is zero, wfdblib.h defines
+wfdb_fread as fread, wfdb_fwrite as fwrite, etc.;  thus in this case, the I/O is
+performed using the standard C I/O functions, and the function definitions in
+the next section are not compiled.  This behavior exactly mimics that of
+versions of the WFDB library earlier than version 10.0.1 (which did not support
+remote file access), with no additional run-time overhead.
 
-If WFDB_NETFILES is non-zero, however, these functions are compiled.  The
+If FileType::kNetFILES is non-zero, however, these functions are compiled.  The
 WFDB_FILE pointers that are among the arguments to these functions point to
 objects that may contain either (local) FILE handles or (remote) NETFILE
 handles, depending on the value of the 'type' member of the WFDB_FILE object.
@@ -856,8 +866,7 @@ before looking on remote http or ftp servers, but the WFDB library allows you
 to set the search order in any way you wish, as in this example.
 */
 
-#if WFDB_NETFILES
-#else /* !WFDB_NETFILES */
+#if !WFDB_NETFILES
 #define nf_feof(nf) (0)
 #define nf_fgetc(nf) (EOF)
 #define nf_fgets(s, size, nf) (NULL)
@@ -876,19 +885,19 @@ to set the search order in any way you wish, as in this example.
    portable way to make a forward reference to a static (local) function. */
 
 void wfdb_clearerr(WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET)
+  if (wp->type == FileType::kNet)
     nf_clearerr(wp->netfp);
   else
     clearerr(wp->fp);
 }
 
 int wfdb_feof(WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_feof(wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_feof(wp->netfp));
   return (feof(wp->fp));
 }
 
 int wfdb_ferror(WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_ferror(wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_ferror(wp->netfp));
   return (ferror(wp->fp));
 }
 
@@ -896,51 +905,53 @@ int wfdb_fflush(WFDB_FILE *wp) {
   if (wp == NULL) { /* flush all WFDB_FILEs */
     nf_fflush(NULL);
     return (fflush(NULL));
-  } else if (wp->type == WFDB_NET)
+  } else if (wp->type == FileType::kNet)
     return (nf_fflush(wp->netfp));
   else
     return (fflush(wp->fp));
 }
 
 char *wfdb_fgets(char *s, int size, WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_fgets(s, size, wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_fgets(s, size, wp->netfp));
   return (fgets(s, size, wp->fp));
 }
 
 size_t wfdb_fread(void *ptr, size_t size, size_t nmemb, WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_fread(ptr, size, nmemb, wp->netfp));
+  if (wp->type == FileType::kNet)
+    return (nf_fread(ptr, size, nmemb, wp->netfp));
   return (fread(ptr, size, nmemb, wp->fp));
 }
 
 int wfdb_fseek(WFDB_FILE *wp, long int offset, int whence) {
-  if (wp->type == WFDB_NET) return (nf_fseek(wp->netfp, offset, whence));
+  if (wp->type == FileType::kNet) return (nf_fseek(wp->netfp, offset, whence));
   return (fseek(wp->fp, offset, whence));
 }
 
 long wfdb_ftell(WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_ftell(wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_ftell(wp->netfp));
   return (ftell(wp->fp));
 }
 
 size_t wfdb_fwrite(const void *ptr, size_t size, size_t nmemb, WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_fwrite(ptr, size, nmemb, wp->netfp));
+  if (wp->type == FileType::kNet)
+    return (nf_fwrite(ptr, size, nmemb, wp->netfp));
   return (fwrite(ptr, size, nmemb, wp->fp));
 }
 
 int wfdb_getc(WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_fgetc(wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_fgetc(wp->netfp));
   return (getc(wp->fp));
 }
 
 int wfdb_putc(int c, WFDB_FILE *wp) {
-  if (wp->type == WFDB_NET) return (nf_putc(c, wp->netfp));
+  if (wp->type == FileType::kNet) return (nf_putc(c, wp->netfp));
   return (putc(c, wp->fp));
 }
 
 int wfdb_fclose(WFDB_FILE *wp) {
   int status;
 
-  status = (wp->type == WFDB_NET) ? nf_fclose(wp->netfp) : fclose(wp->fp);
+  status = (wp->type == FileType::kNet) ? nf_fclose(wp->netfp) : fclose(wp->fp);
 
   if (wp->fp != stdin) SFREE(wp);
   return (status);
@@ -953,9 +964,9 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
   if (p == NULL || strstr(p, "..")) return (NULL);
   SUALLOC(wp, 1, sizeof(WFDB_FILE));
   if (strstr(p, "://")) {
-#if WFDB_NETFILES
+#if FileType::kNetFILES
     if (wp->netfp = nf_fopen(fname, mode)) {
-      wp->type = WFDB_NET;
+      wp->type = FileType::kNet;
       return (wp);
     }
 #endif
@@ -963,7 +974,7 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
     return (NULL);
   }
   if (wp->fp = fopen(fname, mode)) {
-    wp->type = WFDB_LOCAL;
+    wp->type = FileType::kLocal;
     return (wp);
   }
   if (strcmp(mode, WB) == 0 || strcmp(mode, AB) == 0) {
@@ -986,7 +997,7 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
        it was successful (i.e., if stat is now 0), we should try again
        to create the output file. */
     if (stat == 0 && (wp->fp = fopen(fname, mode))) {
-      wp->type = WFDB_LOCAL;
+      wp->type = FileType::kLocal;
       return (wp);
     }
   }

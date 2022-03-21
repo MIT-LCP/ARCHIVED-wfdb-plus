@@ -20,48 +20,7 @@ symbols reserved to the library begin with the characters "wfdb_".
 #include "netfiles.hh"
 #include "wfdb.hh"
 
-/* DEFWFDB is the default value of the WFDB path if the WFDB environment
-   variable is not set.  This value is edited by the configuration script
-   (../configure), which also edits this block of comments to match.
-
-   If WFDB_NETFILES support is disabled, the string ". DBDIR" is
-   usually sufficient for a default WFDB path, thus restricting the search for
-   WFDB files to the current directory ("."), followed by DBDIR).
-
-   If WFDB_NETFILES support is enabled, the first setting below adds the
-   web-accessible PhysioBank databases to the default path; you may wish to
-   change this to use a nearby PhysioNet mirror (for a list of mirrors, see
-   http://physionet.org/mirrors/).  DEFWFDB must not be NULL, however.
-*/
-
-#ifndef WFDB_NETFILES
-inline constexpr char kDefaultWfdbPath[] = ". DBDIR";
-#else
-inline constexpr char kDefaultWfdbPath[] =
-    ". DBDIR http://physionet.org/physiobank/database";
-#endif
-
-/* DEFWFDBCAL is the name of the default WFDB calibration file, used if the
-   WFDBCAL environment variable is not set.  This name need not include path
-   information if the calibration file is located in a directory included in
-   the WFDB path.  The value given below is the name of the standard
-   calibration file supplied on the various CD-ROM databases.  DEFWFDBCAL may
-   be NULL if you prefer not to have a default calibration file.  See calopen()
-   in calib.c for further information. */
-#define DEFWFDBCAL "wfdbcal"
-
-/* WFDB applications may write annotations out-of-order, but in almost all
-   cases, they expect that annotations they read must be in order.  The
-   environment variable WFDBANNSORT specifies if wfdbquit() should attempt to
-   sort annotations in any output annotation files before closing them (it
-   does this if WFDBANNSORT is non-zero, or if WFDBANNSORT is not set, and
-   DEFWFDBANNSORT is non-zero).  Sorting is done by invoking 'sortann' (see
-   ../app/sortann.c) as a separate process;  since this cannot be done from
-   an MS-Windows DLL, sorting is disabled by default in this case. */
-
-// TODO(cx1111): Remove the need for this variable
-#define DEFWFDBANNSORT 1
-
+/* getvec operating modes */
 /* When reading multifrequency records, getvec() can operate in two modes:
    WFDB_LOWRES (returning one sample per signal per frame), or WFDB_HIGHRES
    (returning each sample of any oversampled signals, and duplicating samples
@@ -69,20 +28,51 @@ inline constexpr char kDefaultWfdbPath[] =
    invoking setgvmode(), the value of the environment variable WFDBGVMODE
    determines the mode (0: WFDB_LOWRES, 1: WFDB_HIGHRES);  if WFDBGVMODE
    is not set, the value of DEFWFDBMODE determines the mode. */
-#define DEFWFDBGVMODE WFDB_LOWRES
+enum class GetVecMode {
+  kLowRes = 0,  /* return one sample per signal per frame */
+  kHighRes = 1, /* return each sample of oversampled signals, duplicating
+                   samples of other signals */
+  kGvPad = 2    /* replace invalid samples with previous valid samples */
+};
 
-/* Structures used by internal WFDB library functions only */
-enum class FileType { kLocal, kNet };
+struct WfdbConfig {
+  char *wfdb_path;
+  /* The name of the WFDB calibration file, used if the
+  WFDBCAL environment variable is not set.  This name need not include path
+  information if the calibration file is located in a directory included in
+  the WFDB path. May be NULL if you prefer not to have a default calibration
+  file.  See calopen() in calib.c for further information. */
+  char *wfdb_cal;
+  /* WFDB applications may write annotations out-of-order, but in
+   almost all cases, they expect that annotations they read must be in order.
+   The environment variable WFDBANNSORT specifies if wfdbquit() should attempt
+   to sort annotations in any output annotation files before closing them (it
+   does this if WFDBANNSORT is non-zero, or if WFDBANNSORT is not set, and
+   DEFWFDBANNSORT is non-zero).  Sorting is done by invoking 'sortann' (see
+   ../app/sortann.c) as a separate process */
+  bool ann_sort;
+  GetVecMode getvec_mode;
+};
+
+inline constexpr WfdbConfig kDefaultWfdbConfig{
+    /* This value is edited by the configuration script
+       (../configure), which also edits this block of comments to match.*/
+    // TODO: Account for non-netfiles
+    .wfdb_path = ". DBDIR http://physionet.org/physiobank/database",
+    .wfdb_cal = "wfdbcal",
+    .ann_sort = true,
+    .getvec_mode = GetVecMode::kLowRes};
+
+enum class FileType {
+  kLocal, /* a local file, read via C standard I/O */
+  kNet    /* a remote file, read via libwww */
+};
 
 struct WFDB_FILE {
   FILE *fp;
   struct Netfile *netfp;
   FileType type;
 };
-
-/* Values for WFDB_FILE 'type' field */
-#define WFDB_LOCAL 0 /* a local file, read via C standard I/O */
-#define WFDB_NET 1   /* a remote file, read via libwww */
 
 // An element of the WFDB Path, specifying where to search for database files
 struct WfdbPathComponent {
@@ -103,18 +93,6 @@ char *wfdbfile(const char *file_type, char *record);
 void wfdbmemerr(int behavior);
 // Indicates if memory errors are fatal
 int wfdb_me_fatal();
-
-// These functions expose config strings needed by the WFDB Toolkit for Matlab:
-// Return the string defined by VERSION
-const char *wfdbversion();
-// Return the string defined by LDFLAGS
-const char *wfdbldflags();
-// Return the string defined by CFLAGS
-const char *wfdbcflags();
-// Return the string defined by DEFWFDB
-const char *wfdbdefwfdb();
-// return the string defined by DEFWFDBCAL
-const char *wfdbdefwfdbcal();
 
 // Reads a 16-bit integer
 int wfdb_g16(WFDB_FILE *fp);
@@ -154,15 +132,28 @@ void wfdb_setirec(const char *record_name);
 // Gets current record name
 char *wfdb_getirec();
 
-/* These functions are compiled only if WFDB_NETFILES is non-zero; they permit
-access to remote files via http or ftp (using libcurl) as
-well as to local files (using the standard C I/O functions).  The functions in
-this group are intended primarily for use by other WFDB library functions, but
-may also be called directly by WFDB applications that need to read remote
-files. Unlike other private functions in the WFDB library, the interfaces to
-these are not likely to change, since they are designed to emulate the
-similarly-named ANSI/ISO C standard I/O functions:
+// These functions expose config strings needed by the WFDB Toolkit for Matlab:
+// Return the string defined by VERSION
+const char *wfdbversion();
+// Return the string defined by LDFLAGS
+const char *wfdbldflags();
+// Return the string defined by CFLAGS
+const char *wfdbcflags();
+// Return the string defined by DEFWFDB
+const char *wfdbdefwfdb();
+// return the string defined by DEFWFDBCAL
+const char *wfdbdefwfdbcal();
+
+/* These functions are compiled only if WFDB_NETFILES is non-zero; they
+permit access to remote files via http or ftp (using libcurl) as well as to
+local files (using the standard C I/O functions).  The functions in this group
+are intended primarily for use by other WFDB library functions, but may also be
+called directly by WFDB applications that need to read remote files. Unlike
+other private functions in the WFDB library, the interfaces to these are not
+likely to change, since they are designed to emulate the similarly-named
+ANSI/ISO C standard I/O functions:
 */
+// TODO: Remove these functions after WFDB_FILE uses classes and polymorphism
 
 // Emulates clearerr
 void wfdb_clearerr(WFDB_FILE *fp);
@@ -190,8 +181,5 @@ int wfdb_putc(int c, WFDB_FILE *fp);
 int wfdb_fclose(WFDB_FILE *fp);
 // Emulates fopen, but returns a WFDB_FILE pointer
 WFDB_FILE *wfdb_fopen(char *fname, const char *mode);
-
-__attribute__((__format__(__printf__, 1, 2))) void wfdb_error(
-    const char *format_string, ...);
 
 #endif  // WFDB_LIB_IO_H_

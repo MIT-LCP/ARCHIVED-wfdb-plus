@@ -970,7 +970,7 @@ static int readheader(const char *record) {
      if not, the header file may have been renamed in error or its contents
      may be corrupted.  The requirement for a match is waived for remote
      files since the user may not be able to make any corrections to them. */
-  if (hheader->type == WFDB_LOCAL && hheader->fp != stdin &&
+  if (hheader->type == FileType::kLocal && hheader->fp != stdin &&
       strncmp(p, record, strlen(p)) != 0) {
     /* If there is a mismatch, check to see if the record argument includes
        a directory separator (whether valid or not for this OS);  if so,
@@ -2515,9 +2515,7 @@ problems if this rounding is omitted.  Thanks to Guido Muesch for pointing out
 this problem.
  */
 
-int getspf() {
-  return ((sfreq != ffreq) ? (int)(sfreq / ffreq + 0.5) : 1);
-}
+int getspf() { return ((sfreq != ffreq) ? (int)(sfreq / ffreq + 0.5) : 1); }
 
 void setgvmode(int mode) {
   if (mode < 0) { /* (re)set to default mode */

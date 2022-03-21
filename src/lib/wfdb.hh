@@ -164,15 +164,6 @@ the legal values for the format field in a WFDB_siginfo structure.
 #define WFDB_DEFGAIN 200.0 /* default value for gain (adu/physical unit) */
 #define WFDB_DEFRES 12     /* default value for ADC resolution (bits) */
 
-/* getvec operating modes */
-#define WFDB_LOWRES 0 /* return one sample per signal per frame */
-#define WFDB_HIGHRES                              \
-  1 /* return each sample of oversampled signals, \
-       duplicating samples of other signals */
-#define WFDB_GVPAD                                 \
-  2 /* replace invalid samples with previous valid \
-       samples */
-
 /* calinfo '.caltype' values
 WFDB_AC_COUPLED and WFDB_DC_COUPLED are used in combination with the pulse
 shape definitions below to characterize calibration pulses. */
