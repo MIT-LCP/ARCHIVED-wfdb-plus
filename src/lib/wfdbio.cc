@@ -6,10 +6,12 @@ Low-level I/O functions for the WFDB library
 
 #include "wfdbio.hh"
 
+#include <absl/strings/str_split.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include <fstream>
 #include <vector>
 
 #include "wfdb.hh"
@@ -19,7 +21,7 @@ Low-level I/O functions for the WFDB library
 struct WfdbRuntimeConfig {
   std::string wfdb_path;
   std::vector<WfdbPathComponent>
-      wfdb_path_list;  // TODO: figure out if both of these are needed
+      wfdb_path_list;  // TODO: replace this with a db source list
   std::string wfdb_cal;
   bool ann_sort;
   GetVecMode get_vec_mode;
@@ -27,11 +29,6 @@ struct WfdbRuntimeConfig {
 };
 
 static WfdbRuntimeConfig wfdb_runtime_config;
-
-// static std::string wfdb_path;  // Space delimited entries
-// static std::vector<WfdbPathComponent>
-//     wfdb_path_list;  // TODO: figure out if both of these are needed
-// static char *wfdb_filename;
 
 /* getwfdb is used to obtain the WFDB path, a list of places in which to search
 for database files to be opened for reading.  In most environments, this list
@@ -45,27 +42,37 @@ const std::string &getwfdb() { return wfdb_runtime_config.wfdb_path; }
 to restore the WFDB path to the value that was returned by the first call
 to getwfdb (or NULL if getwfdb was not called). */
 
-void resetwfdb() {
-  wfdb_runtime_config.wfdb_path = kDefaultWfdbConfig.wfdb_path;
-}
+void resetwfdb() { setwfdb(kDefaultWfdbConfig.wfdb_path); }
 
 /* Changes the WFDB path. */
 void setwfdb(std::string_view path) {
+  // TODO: Validate path. Or stop storing the full path string.
   wfdb_runtime_config.wfdb_path = path;
   wfdb_parse_path(path);
 }
 
+// Set the WFDB path from the environment variable or config file if present
 void init_wfdb_path() {
-  if (wfdb_runtime_config.wfdb_path.empty()) {
-    const char *p = getenv("WFDB");
+  const std::string path = getenv("WFDB");
 
-    if (p == nullptr) {
-      resetwfdb();
+  if (path.empty()) {
+    // TODO: Get value from config file
+    resetwfdb();
+  } else {
+    // Get WFDB path from file
+    if (path.starts_with("@")) {
+      std::ifstream file;
+      file.open(path, std::ios::in);
+
+      if (file.is_open()) {
+        std::string line;
+        std::getline(file, line);
+        setwfdb(line);
+      }
+    } else {
+      setwfdb(path);
     }
-
-    p = wfdb_getiwfdb(wfdb_path);
-
-    wfdb_parse_path(p);
+    // TODO: Use default if previous calls are unsuccessful
   }
 };
 
@@ -86,10 +93,6 @@ char *wfdbfile(const char *s, char *record) {
     return (NULL);
 }
 
-/* wfdb_free_path_list clears out the path list, freeing all memory allocated
-   to it. */
-void wfdb_free_path_list() { wfdb_path_list.clear(); }
-
 /* Determine how the WFDB library handles memory allocation errors (running
 out of memory).  Call wfdbmemerr(0) in order to have these errors returned
 to the caller;  by default, such errors cause the running process to exit. */
@@ -97,31 +100,6 @@ to the caller;  by default, such errors cause the running process to exit. */
 static int wfdb_mem_behavior = 1;
 
 void wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
-
-/* Functions that expose configuration constants used by the WFDB Toolkit for
-   Matlab. */
-
-#ifndef VERSION
-#define VERSION "VERSION not defined"
-#endif
-
-#ifndef LDFLAGS
-#define LDFLAGS "LDFLAGS not defined"
-#endif
-
-#ifndef CFLAGS
-#define CFLAGS "CFLAGS not defined"
-#endif
-
-const char *wfdbversion() { return VERSION; }
-
-const char *wfdbldflags() { return LDFLAGS; }
-
-const char *wfdbcflags() { return CFLAGS; }
-
-const char *wfdbdefwfdb() { return kDefaultWfdbConfig.wfdb_path; }
-
-const char *wfdbdefwfdbcal() { return kDefaultWfdbConfig.wfdb_cal; }
 
 /* Private functions (for the use of other WFDB library functions only). */
 
@@ -235,186 +213,13 @@ OS- and compiler-dependent definitions:
 #define RB "rb"
 #define WB "wb"
 
-/* wfdb_parse_path constructs a linked list of path components by splitting
-its string input (usually the value of WFDB). */
-
+/* Constructs a linked list of path components by splitting its string input
+(usually the value of WFDB), and sets the path list variable. Allowed delimiters
+are space, tab, and newline characters */
 void wfdb_parse_path(std::string_view path_string) {
-  const char *q;
-  int current_type, slashes, found_end;
-  WfdbPathComponent *c0 = NULL, *c1 = wfdb_path_list;
-  static int first_call = 1;
-
-  /* First, free the existing wfdb_path_list, if any. */
-  wfdb_path_list.clear();
-
-  /* Do nothing else if no path string was supplied. */
-  if (p == NULL) return (0);
-
-  /* Register the cleanup function so that it is invoked on exit. */
-  if (first_call) {
-    atexit(wfdb_path_list.clear);
-    first_call = 0;
-  }
-  q = p;
-
-  /* Now construct the wfdb_path_list from the contents of p. */
-  while (*q) {
-    /* Find the beginning of the next component (skip whitespace). */
-    while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r') q++;
-    p = q--;
-    current_type = FileType::kLocal;
-    /* Find the end of the current component. */
-    found_end = 0;
-    slashes = 0;
-    do {
-      switch (*++q) {
-        case ':': /* might be a component delimiter, part of '://',
-                     a drive suffix (MS-DOS), or a directory separator
-                     (Mac) */
-          if (*(q + 1) == '/' && *(q + 2) == '/') current_type = FileType::kNet;
-          /* Allow colons within the authority portion of the URL.
-             For example, "http://[::1]:8080/database:/usr/database"
-             is a database path with two components. */
-          else if (current_type != FileType::kNet || slashes > 2)
-            found_end = 1;
-          break;
-        case ';': /* definitely a component delimiter */
-        case ' ':
-        case '\t':
-        case '\n':
-        case '\r':
-        case '\0':
-          found_end = 1;
-          break;
-        case '/':
-          slashes++;
-          break;
-      }
-    } while (!found_end);
-
-    /* current component begins at p, ends at q-1 */
-    SUALLOC(c1, 1, sizeof(WfdbPathComponent));
-    SALLOC(c1->prefix, q - p + 1, sizeof(char));
-    memcpy(c1->prefix, p, q - p);
-    c1->type = current_type;
-    c1->prev = c0;
-    if (c0)
-      c0->next = c1;
-    else
-      wfdb_path_list = c1;
-    c0 = c1;
-    if (*q) q++;
-  }
-  return (0);
-}
-
-/* Reads a new value for WFDB from the file named by the second
-through last characters of its input argument. If that value begins with '@',
-this procedure is repeated, with nesting up to ten levels.
-
-Note that the input file must be local. This limitation is
-intentional, since the alternative (to allow remote files to determine the
-contents of the WFDB path) seems an unnecessary security risk. */
-
-#ifndef SEEK_END
-#define SEEK_END 2
-#endif
-
-static const char *wfdb_getiwfdb(char **p) {
-  FILE *wfdbpfile;
-  int i = 0;
-  long len;
-
-  for (i = 0; i < 10 && *p != NULL && **p == '@'; i++) {
-    if ((wfdbpfile = fopen((*p) + 1, RB)) == NULL)
-      **p = 0;
-    else {
-      if (fseek(wfdbpfile, 0L, SEEK_END) == 0)
-        len = ftell(wfdbpfile);
-      else
-        len = 255;
-      SALLOC(*p, 1, len + 1);
-      if (*p == NULL) {
-        fclose(wfdbpfile);
-        break;
-      }
-      rewind(wfdbpfile);
-      len = fread(*p, 1, (int)len, wfdbpfile);
-      while ((*p)[len - 1] == '\n' || (*p)[len - 1] == '\r') (*p)[--len] = '\0';
-      (void)fclose(wfdbpfile);
-    }
-  }
-  if (*p != NULL && **p == '@') {
-    wfdb_error("getwfdb: files nested too deeply\n");
-    **p = 0;
-  }
-  return (*p);
-}
-
-static char *p_wfdb, *p_wfdbcal, *p_wfdbannsort, *p_wfdbgvmode;
-
-/* wfdb_free_config frees all memory allocated by wfdb_export_config.
-   This function must be invoked before exiting to avoid a memory leak.
-   It must not be invoked at any other time, since pointers passed to
-   putenv must be maintained by the caller, according to POSIX.1-2001
-   semantics for putenv.  */
-// TODO: Replace env var usage?
-void wfdb_free_config() {
-  static char n_wfdb[] = "WFDB=";
-  static char n_wfdbcal[] = "WFDBCAL=";
-  static char n_wfdbannsort[] = "WFDBANNSORT=";
-  static char n_wfdbgvmode[] = "WFDBGVMODE=";
-  if (p_wfdb) putenv(n_wfdb);
-  if (p_wfdbcal) putenv(n_wfdbcal);
-  if (p_wfdbannsort) putenv(n_wfdbannsort);
-  if (p_wfdbgvmode) putenv(n_wfdbgvmode);
-  SFREE(p_wfdb);
-  SFREE(p_wfdbcal);
-  SFREE(p_wfdbannsort);
-  SFREE(p_wfdbgvmode);
-  // SFREE(wfdbpath);
-  SFREE(wfdb_filename);
-}
-
-/* wfdb_export_config is invoked from setwfdb to place the configuration
-   variables into the environment if possible. */
-// TODO: Replace env var usage?
-void wfdb_export_config() {
-  static int first_call = 1;
-  char *envstr = NULL;
-
-  /* Register the cleanup function so that it is invoked on exit. */
-  if (first_call) {
-    atexit(wfdb_free_config);
-    first_call = 0;
-  }
-  SALLOC(envstr, 1, strlen(wfdbpath) + 6);
-  if (envstr) {
-    sprintf(envstr, "WFDB=%s", wfdbpath);
-    putenv(envstr);
-    SFREE(p_wfdb);
-    p_wfdb = envstr;
-  }
-  if (getenv("WFDBCAL") == NULL) {
-    SALLOC(p_wfdbcal, 1, strlen(DEFWFDBCAL) + 9);
-    if (p_wfdbcal) {
-      sprintf(p_wfdbcal, "WFDBCAL=%s", DEFWFDBCAL);
-      putenv(p_wfdbcal);
-    }
-  }
-  if (getenv("WFDBANNSORT") == NULL) {
-    SALLOC(p_wfdbannsort, 1, 14);
-    if (p_wfdbannsort) {
-      sprintf(p_wfdbannsort, "WFDBANNSORT=%d", DEFWFDBANNSORT == 0 ? 0 : 1);
-      putenv(p_wfdbannsort);
-    }
-  }
-  if (getenv("WFDBGVMODE") == NULL) {
-    SALLOC(p_wfdbgvmode, 1, 13);
-    if (p_wfdbgvmode) {
-      sprintf(p_wfdbgvmode, "WFDBGVMODE=%d", DEFWFDBGVMODE == 0 ? 0 : 1);
-      putenv(p_wfdbgvmode);
-    }
+  for (std::string &path :
+       absl::StrSplit(path_string, absl::ByAnyChar(" \t\n\r"))) {
+    wfdb_addtopath(path);
   }
 }
 
@@ -438,63 +243,15 @@ current directory should not be specified initially as the first component of
 the WFDB path.
  */
 
-void wfdb_addtopath(const char *s) {
-  const char *p;
-  int i, len;
-  WfdbPathComponent *c0, *c1;
-
-  if (s == NULL || *s == '\0') return;
-
-  /* Start at the end of the string and search backwards for a directory
-     separator (accept any of the possible separators). */
-  for (p = s + strlen(s) - 1; p >= s && *p != '/' && *p != '\\' && *p != ':';
-       p--)
-    ;
-
-  /* A path component specifying the root directory must be treated as a
-     special case;  normally the trailing directory separator is not
-     included in the path component, but in this case there is nothing
-     else to include. */
-
-  if (p == s && (*p == '/' || *p == '\\' || *p == ':')) p++;
-
-  if (p < s) return; /* argument did not contain a path component */
-
-  /* If p > s, then p points to the first character following the path
-     component of s. Search the current WFDB path for this path component. */
-  if (wfdbpath == NULL) (void)getwfdb();
-  for (c0 = c1 = wfdb_path_list, i = p - s; c1; c1 = c1->next) {
-    if (strncmp(c1->prefix, s, i) == 0) {
-      if (c0 == c1 || (c1->prev == c0 && strcmp(c0->prefix, ".") == 0))
-        return; /* no changes needed, quit */
-      /* path component of s is already in WFDB path -- unlink its node */
-      if (c1->next) (c1->next)->prev = c1->prev;
-      if (c1->prev) (c1->prev)->next = c1->next;
-      break;
-    }
+// TODO: Replace this when db config objects are set up
+void wfdb_addtopath(const std::string &path) {
+  if (path.starts_with("http")) {
+    wfdb_runtime_config.wfdb_path_list.push_back(
+        WfdbPathComponent{.prefix = path, .type = FileType::kNet});
+  } else {
+    wfdb_runtime_config.wfdb_path_list.push_back(
+        WfdbPathComponent{.prefix = path, .type = FileType::kLocal});
   }
-  if (!c1) {
-    /* path component of s not in WFDB path -- make a new node for it */
-    SUALLOC(c1, 1, sizeof(WfdbPathComponent));
-    SALLOC(c1->prefix, p - s + 1, sizeof(char));
-    memcpy(c1->prefix, s, p - s);
-    if (strstr(c1->prefix, "://"))
-      c1->type = FileType::kNet;
-    else
-      c1->type = FileType::kLocal;
-  }
-  /* (Re)link the unlinked node. */
-  if (strcmp(c0->prefix, ".") == 0) { /* skip initial "." if present */
-    c1->prev = c0;
-    if ((c1->next = c0->next) != NULL) (c1->next)->prev = c1;
-    c0->next = c1;
-  } else { /* no initial ".";  insert the node at the head of the path */
-    wfdb_path_list = c1;
-    c1->prev = NULL;
-    c1->next = c0;
-    c0->prev = c1;
-  }
-  return;
 }
 
 #include <stdarg.h>
@@ -674,9 +431,6 @@ WFDB_FILE *wfdb_open(const char *s, const char *record, int mode) {
     SFREE(r);
     return (wfdb_fopen(wfdb_filename, AB));
   }
-
-  /* Parse the WFDB path if not done previously. */
-  if (wfdb_path_list == NULL) (void)getwfdb();
 
   /* If the filename begins with 'http://' or 'https://', it's a URL.  In
      this case, don't search the WFDB path, but add its parent directory
@@ -964,7 +718,7 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
   if (p == NULL || strstr(p, "..")) return (NULL);
   SUALLOC(wp, 1, sizeof(WFDB_FILE));
   if (strstr(p, "://")) {
-#if FileType::kNetFILES
+#if WFDB_NETFILES
     if (wp->netfp = nf_fopen(fname, mode)) {
       wp->type = FileType::kNet;
       return (wp);
@@ -1004,3 +758,28 @@ WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
   SFREE(wp);
   return (NULL);
 }
+
+/* Functions that expose configuration constants used by the WFDB Toolkit for
+   Matlab. */
+
+#ifndef VERSION
+#define VERSION "VERSION not defined"
+#endif
+
+#ifndef LDFLAGS
+#define LDFLAGS "LDFLAGS not defined"
+#endif
+
+#ifndef CFLAGS
+#define CFLAGS "CFLAGS not defined"
+#endif
+
+const char *wfdbversion() { return VERSION; }
+
+const char *wfdbldflags() { return LDFLAGS; }
+
+const char *wfdbcflags() { return CFLAGS; }
+
+const char *wfdbdefwfdb() { return kDefaultWfdbConfig.wfdb_path; }
+
+const char *wfdbdefwfdbcal() { return kDefaultWfdbConfig.wfdb_cal; }
