@@ -16,9 +16,14 @@ symbols reserved to the library begin with the characters "wfdb_".
 #endif
 
 #include <string>
+#include <vector>
 
 #include "netfiles.hh"
 #include "wfdb.hh"
+
+#ifndef SEEK_END
+#define SEEK_END 2
+#endif
 
 /* getvec operating modes */
 /* When reading multifrequency records, getvec() can operate in two modes:
@@ -103,9 +108,6 @@ void wfdb_p16(unsigned int x, WFDB_FILE *fp);
 // Writes a 32-bit integer
 void wfdb_p32(long x, WFDB_FILE *fp);
 
-// Puts the WFDB path, etc. into the environment
-void wfdb_export_config();
-
 // Finds and opens database files
 WFDB_FILE *wfdb_open(const char *file_type, const char *record, int mode);
 // Checks record and annotator names for validity
@@ -113,8 +115,6 @@ int wfdb_checkname(const char *name, const char *description);
 // Removes trailing '.hea' from a record name, if present
 void wfdb_striphea(char *record);
 
-// Frees data structures assigned to the path list
-void wfdb_free_path_list();
 // Parses the path string and sets the path components
 void wfdb_parse_path(std::string_view path_string);
 
