@@ -16,6 +16,15 @@ Low-level I/O functions for the WFDB library
 
 #include "wfdb.hh"
 
+inline constexpr WfdbConfig kDefaultWfdbConfig{
+    /* This value is edited by the configuration script
+       (../configure), which also edits this block of comments to match.*/
+    // TODO: Account for non-netfiles
+    .wfdb_path = ". DBDIR http://physionet.org/physiobank/database",
+    .wfdb_cal = "wfdbcal",
+    .ann_sort = true,
+    .getvec_mode = GetVecMode::kLowRes};
+
 /* Global configuration variables */
 
 struct WfdbRuntimeConfig {
@@ -87,25 +96,11 @@ char *wfdbfile(const char *s, char *record) {
   wfdb_striphea(record);
 
   if ((ifile = wfdb_open(s, record, WFDB_READ))) {
+    // Using function to set global, following by returning the global
     (void)wfdb_fclose(ifile);
     return (wfdb_filename);
   } else
     return (NULL);
-}
-
-/* Determine how the WFDB library handles memory allocation errors (running
-out of memory).  Call wfdbmemerr(0) in order to have these errors returned
-to the caller;  by default, such errors cause the running process to exit. */
-
-static int wfdb_mem_behavior = 1;
-
-void wfdbmemerr(int behavior) { wfdb_mem_behavior = behavior; }
-
-/* Private functions (for the use of other WFDB library functions only). */
-
-int wfdb_me_fatal() /* used by the MEMERR macro defined in wfdblib.h */
-{
-  return (wfdb_mem_behavior);
 }
 
 /* The next four functions read and write integers in PDP-11 format, which is

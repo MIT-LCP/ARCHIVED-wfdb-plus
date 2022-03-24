@@ -59,15 +59,6 @@ struct WfdbConfig {
   GetVecMode getvec_mode;
 };
 
-inline constexpr WfdbConfig kDefaultWfdbConfig{
-    /* This value is edited by the configuration script
-       (../configure), which also edits this block of comments to match.*/
-    // TODO: Account for non-netfiles
-    .wfdb_path = ". DBDIR http://physionet.org/physiobank/database",
-    .wfdb_cal = "wfdbcal",
-    .ann_sort = true,
-    .getvec_mode = GetVecMode::kLowRes};
-
 enum class FileType {
   kLocal, /* a local file, read via C standard I/O */
   kNet    /* a remote file, read via libwww */
@@ -94,10 +85,7 @@ void resetwfdb();
 
 // Returns the complete pathname of a WFDB file
 char *wfdbfile(const char *file_type, char *record);
-// Set behavior on memory errors
-void wfdbmemerr(int behavior);
-// Indicates if memory errors are fatal
-int wfdb_me_fatal();
+
 
 // Reads a 16-bit integer
 int wfdb_g16(WFDB_FILE *fp);
