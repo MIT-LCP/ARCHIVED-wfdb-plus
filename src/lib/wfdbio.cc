@@ -7,6 +7,7 @@ Low-level I/O functions for the WFDB library
 #include "wfdbio.hh"
 
 #include <absl/strings/str_split.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -248,20 +249,6 @@ void wfdb_addtopath(const std::string &path) {
         WfdbPathComponent{.prefix = path, .type = FileType::kLocal});
   }
 }
-
-#include <stdarg.h>
-#ifdef va_copy
-#define VA_COPY(dst, src) va_copy(dst, src)
-#define VA_END2(ap) va_end(ap)
-#else
-#ifdef __va_copy
-#define VA_COPY(dst, src) __va_copy(dst, src)
-#define VA_END2(ap) va_end(ap)
-#else
-#define VA_COPY(dst, src) memcpy(&(dst), &(src), sizeof(va_list))
-#define VA_END2(ap) (void)(ap)
-#endif
-#endif
 
 /* The wfdb_fprintf function handles all formatted output to files.  It is
 used in the same way as the standard fprintf function, except that its first
