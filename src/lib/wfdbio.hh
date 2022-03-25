@@ -11,19 +11,13 @@ symbols reserved to the library begin with the characters "wfdb_".
 #define WFDB_LIB_IO_H_
 
 #include <sys/stat.h>
-#ifndef FILE
-#include <stdio.h>
-#endif
 
+#include <fstream>
 #include <string>
 #include <vector>
 
 #include "netfiles.hh"
 #include "wfdb.hh"
-
-#ifndef SEEK_END
-#define SEEK_END 2
-#endif
 
 /* getvec operating modes */
 /* When reading multifrequency records, getvec() can operate in two modes:
@@ -65,7 +59,7 @@ enum class FileType {
 };
 
 struct WFDB_FILE {
-  FILE *fp;
+  std::fstream fp;
   struct Netfile *netfp;
   FileType type;
 };
@@ -85,7 +79,6 @@ void resetwfdb();
 
 // Returns the complete pathname of a WFDB file
 char *wfdbfile(const char *file_type, char *record);
-
 
 // Reads a 16-bit integer
 int wfdb_g16(WFDB_FILE *fp);
@@ -111,7 +104,6 @@ static const char *wfdb_getiwfdb(char **p);
 
 // Adds path component of string argument to WFDB path
 void wfdb_addtopath(const char *pathname);
-__attribute__((__format__(__printf__, 2, 3)))
 
 // Like fprintf, but first arg is a WFDB_FILE pointer
 int wfdb_fprintf(WFDB_FILE *fp, const char *format, ...);

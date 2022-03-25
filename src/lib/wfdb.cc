@@ -1,9 +1,9 @@
 #include "wfdb.hh"
 
-#include <absl/strings/str_format.h>
-
 #include <iostream>
 #include <string>
+
+#include "absl/strings/str_format.h"
 
 // Error tracking state
 static std::string error_message =
