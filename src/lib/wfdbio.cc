@@ -6,7 +6,6 @@ Low-level I/O functions for the WFDB library
 
 #include "wfdbio.hh"
 
-#include <absl/strings/str_split.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +14,8 @@ Low-level I/O functions for the WFDB library
 #include <fstream>
 #include <vector>
 
+#include "absl/status/statusor.h"
+#include "absl/strings/str_split.h"
 #include "wfdb.hh"
 
 inline constexpr WfdbConfig kDefaultWfdbConfig{
@@ -693,52 +694,31 @@ int wfdb_fclose(WFDB_FILE *wp) {
   return (status);
 }
 
-WFDB_FILE *wfdb_fopen(char *fname, const char *mode) {
-  char *p = fname;
-  WFDB_FILE *wp;
+absl::StatusOr<WFDB_FILE> wfdb_fopen(const std::string &fname,
+                                     std::ios::openmode mode) {
+  // char *p = fname;
+  WFDB_FILE wp;
 
-  if (p == NULL || strstr(p, "..")) return (NULL);
-  SUALLOC(wp, 1, sizeof(WFDB_FILE));
-  if (strstr(p, "://")) {
-#if WFDB_NETFILES
-    if (wp->netfp = nf_fopen(fname, mode)) {
-      wp->type = FileType::kNet;
-      return (wp);
-    }
-#endif
-    SFREE(wp);
-    return (NULL);
+  if (fname.empty() || fname.find("..") != std::string::npos) {
+    return absl::InvalidArgumentError("Invalid file name");
   }
-  if (wp->fp = fopen(fname, mode)) {
-    wp->type = FileType::kLocal;
-    return (wp);
-  }
-  if (strcmp(mode, WB) == 0 || strcmp(mode, AB) == 0) {
-    int stat = 1;
 
-    /* An attempt to create an output file failed.  Check to see if all
-       of the directories in the path exist, create them if necessary
-       and possible, then try again. */
-    for (p = fname; *p; p++)
-      if (*p == '/') { /* only Unix-style directory separators */
-        *p = '\0';
-        stat = mkdir(fname, 0755);
-        /*
-           The '0755' means that (under Unix), the directory will
-           be world-readable, but writable only by the owner. */
-        *p = '/';
-      }
-    /* At this point, we may have created one or more directories.
-       Only the last attempt to do so matters here:  if and only if
-       it was successful (i.e., if stat is now 0), we should try again
-       to create the output file. */
-    if (stat == 0 && (wp->fp = fopen(fname, mode))) {
-      wp->type = FileType::kLocal;
-      return (wp);
-    }
+  // TODO: netfile support
+  // if (fname.find("://") != std::string::npos) {
+  //   if (wp.netfp = nf_fopen(fname, mode)) {
+  //     wp.type = FileType::kNet;
+  //     return wp;
+  //   }
+
+  //   return absl::UnavailableError("File unavailable");
+  // }
+
+  if (wp.fp = std::fstream(fname, mode)) {
+    wp.type = FileType::kLocal;
+    return wp;
   }
-  SFREE(wp);
-  return (NULL);
+
+  return absl::UnavailableError("File unavailable");
 }
 
 /* Functions that expose configuration constants used by the WFDB Toolkit for

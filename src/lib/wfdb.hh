@@ -283,3 +283,4 @@ void wfdbquiet();
 void wfdbverbose();
 
 #endif  // WFDB_LIB_WFDB_H_
+
