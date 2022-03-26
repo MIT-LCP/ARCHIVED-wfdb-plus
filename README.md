@@ -1,4 +1,6 @@
-# WFDB Plus
+# [ARCHIVED] - WFDB Plus
+
+**THIS PROJECT IS ARCHIVED**
 
 This is NOT the official WFDB software package. See https://github.com/bemoody/wfdb instead.
 
